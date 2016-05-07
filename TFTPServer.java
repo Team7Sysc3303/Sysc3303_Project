@@ -50,7 +50,7 @@ public class TFTPServer implements Runnable {
 
    public static void main( String args[] ) throws Exception
    {
-	   TFTPServer c = new TFTPServer();
-	   c.run();
+	  Thread ServerThread = new Thread (new TFTPServer(), "Server");
+	   ServerThread.start();
    }
 }
