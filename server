@@ -9,7 +9,7 @@ import java.net.*;
 import java.lang.Object.*;
 
 
-public class TFTPServer {
+public class TFTPServer implements Runnable {
 
    // types of requests we can receive
    public static enum Request { READ, WRITE, ERROR};
