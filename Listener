@@ -72,7 +72,7 @@
 	         	
 	         Thread responseThread = new Thread (new ResponseHandler(req, receivePacket), "ThreadSend"+counter);
 	         counter ++;
-	         
+	         responseThread.start();
 	   
 	   }
    }
