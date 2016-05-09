@@ -87,6 +87,7 @@ public class Server implements Runnable {
 	         else if (data[1]==1) req = Request.READ; // could be read
 	         else if (data[1]==4) req = Request.READ; // could be acknoledgment
 	         else if (data[1]==2) req = Request.WRITE; // could be write
+	         else if (data[1]==3) req = Request.WRITE; // could be data, Client writing to the server
 	         else req = Request.ERROR; // bad
 
 	         if (req!=Request.ERROR) { // check for filename
