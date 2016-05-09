@@ -49,9 +49,9 @@ public class Server implements Runnable {
 	   
 	   for(;;) { // loop forever
 	         // Construct a DatagramPacket for receiving packets up
-	         // to 100 bytes long (the length of the byte array).
+	         // to 516 bytes long (the length of the byte array).
 	         
-	         data = new byte[100];
+	         data = new byte[516];
 	         receivePacket = new DatagramPacket(data, data.length);
 	         
 	         System.out.println("Server: Waiting for packet.");
