@@ -85,6 +85,7 @@ public class Server implements Runnable {
 	         // Otherwise, ignore it
 	         if (data[0]!=0) req = Request.ERROR; // bad
 	         else if (data[1]==1) req = Request.READ; // could be read
+	         else if (data[1]==4) req = Request.READ; // could be acknoledgment
 	         else if (data[1]==2) req = Request.WRITE; // could be write
 	         else req = Request.ERROR; // bad
 
