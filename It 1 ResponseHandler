@@ -10,8 +10,8 @@ public class ResponseHandler implements Runnable {
 	private DatagramPacket receivePacket, sendPacket;
 	private DatagramSocket sendSocket;
 	private String filename, mode;
-	BufferedInputStream in;
-	BufferedOutputStream out;
+	private BufferedInputStream in;
+	private BufferedOutputStream out;
 	
 	public ResponseHandler(Server.Request req, DatagramPacket receive,
 												String name, String mod){
@@ -58,6 +58,7 @@ public class ResponseHandler implements Runnable {
 				System.arraycopy(receivePacket.getData(),4, data,0,
 						receivePacket.getLength()-4);//copy block of data from packet
 				out.write(data);
+				return responseW;
 			}			
 		}
 		
