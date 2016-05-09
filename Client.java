@@ -32,7 +32,7 @@ public class Client {
 
    public void sendAndReceive()
    {
-      byte[] msg = new byte[100], // message we send
+      byte[] msg = new byte[516], // message we send
              fn, // filename as an array of bytes
              md, // mode as an array of bytes
              data; // reply as array of bytes
@@ -146,9 +146,9 @@ public class Client {
         System.out.println("Client: Packet sent.");
 
         // Construct a DatagramPacket for receiving packets up
-        // to 100 bytes long (the length of the byte array).
+        // to 516 bytes long (the length of the byte array).
 
-        data = new byte[100];
+        data = new byte[516];
         receivePacket = new DatagramPacket(data, data.length);
 
         System.out.println("Client: Waiting for packet.");
