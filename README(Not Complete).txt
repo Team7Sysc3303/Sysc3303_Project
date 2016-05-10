@@ -47,14 +47,14 @@ Client Select Options:
 3. Quit File
 ----------------------
 
-1. Type "Read", "Write" or "Q"  to select one of the three options stated above. The following instructions will then be shown on the console:
+1. Type "Read", "Write" or "Q"  to select one of the three options stated above. The following instructions will then be shown on the console depending on which option was selected. In this case the read option was selected:
 
-E.g.
+
 Client: Enter the type of request (Read/ Write) [Press Q to shutdown]:
 
 Read
 
-Client: Enter File name, with extension (e.g .txt) [Press Q to shutdown]:
+Client: Enter the file directory and file name (with extension) [Press Q to shutdown]: 
 
 2. Follow the instructions and then test it for both the read and write requests using the test files available in the project folder.
 
