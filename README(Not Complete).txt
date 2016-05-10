@@ -78,16 +78,13 @@ Names of Test Files.
 -.....
 -.....
 
-3. Hit enter then you will see:
-
-File transfer was successful.
-
-4. Try write/read (Reading and writing the same file will overwrite 
-your previous)
-
+// chenge 4, 5 and 6
+......................................................................
+4. Try write/read
 5. Read request: Only enter the file name into the prompt.
-
 6. Write request: Enter the full absolute path to your file
+......................................................................
+
 
 /**
 We assume the transferring goes sequentially, i.e bloch#1 , Block#2 ... etc
