@@ -2,7 +2,6 @@
 // This class is the client side for a very simple assignment based on TFTP on
 // UDP/IP. The client uses one port and sends a read or write request and gets 
 // the appropriate response from the server.  No actual file transfer takes place.   
-package iteration1;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -50,7 +49,7 @@ public class Client {
 	   data[len-1] = 0;
 	   DatagramPacket p = null;
 	   try{
-		   p = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), sendPort);
+		   p = new DatagramPacket(data, len, InetAddress.getLocalHost(), sendPort);  //changed data.length to len
 	   }catch(IOException e){
 		   e.printStackTrace();
 		   System.exit(1);
@@ -159,7 +158,7 @@ public class Client {
 	   try {
 		boolean finished = false;
 		byte[] write = new byte[512];
-		System.arraycopy(data, 4, write, 0, data.length);
+		System.arraycopy(data, 4, write, 0, data.length-4);
 		while(!finished){
 			   // do transfer. and also send and receive till we finish.
 			out.write(write);
