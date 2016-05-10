@@ -39,7 +39,9 @@ public class Client {
    //////////////////////////////////////////////////////////////////////////////////////////////////////
    //////////////////////////////////////////////////////////////////////////////////////////////////////
    
-   
+   /**
+    * Constructs a READ REQUEST packet to be sent to the server.
+    */
    public DatagramPacket constructRRQ(byte[] data){
 	   data[0] = 0; data[1] = 1;
 	   System.arraycopy(filename.getBytes(), 0, data, 2, filename.length());
@@ -57,7 +59,9 @@ public class Client {
 	   return p;
    }
    
-   
+   /**
+    * Constructs a WRITE REQUEST packet to be sent to the server.
+    */
    public DatagramPacket constructWRQ(byte[] data){
 	   data[0] = 0; data[1] = 2;
 	   System.arraycopy(filename.getBytes(), 0, data, 2, filename.length());
@@ -65,7 +69,7 @@ public class Client {
 	   System.arraycopy("octet".getBytes(), 0, data, filename.length()+3, "octet".length());
 	   int len = filename.length() + "octet".length() + 4;
 	   data[len-1] = 0;
-	   DatagramPacket p = null;
+	   DatagramPacket p = null; // a way to avoid error message ("variable might not be initialized")
 	   try{
 		   p = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), sendPort);
 	   }catch(IOException e){
@@ -74,7 +78,11 @@ public class Client {
 	   }
 	   return p;
    }
-   
+   /**
+    * Updates the data block# to the received ACK block# used for WRITE REQUESTS's data transfers.
+    * Where the server send the ACK with block # 0, and we respond with a data of block# 1
+    * Also, a check if we reached the maximum number of blocks which is, (2^16)-1, in two bytes (255, 255)
+    */
    public void updateACK(byte first, byte second, byte[] data){
 	   //first and second bytes of ACK + 1 and stored into data block#;
 	   
@@ -90,27 +98,35 @@ public class Client {
 	   }
 
    }
+   /**
+    * Creates a folder named Directory and creates a text inside of it to be used then for writing data 
+    * whenever we read from the server to it.
+    * Also, never overwrite the file. If the file already there it uses it and dont create a new one.
+    * Also, it initializes BufferedOutputStream
+    */
    public void CreateOutStream() throws FileNotFoundException, IOException
    {
 
 	   writeFile = new File("Directory\\test2.txt");
-	   if(!writeFile.exists()){
-	   if (writeFile.getParentFile().mkdir()) {
-	       writeFile.createNewFile();
+	   if(!writeFile.exists()){ // checks if the file doesn't exist.
+	   if (writeFile.getParentFile().mkdir()) { // creates the Directory.
+	       writeFile.createNewFile(); // creates the file.
 	   } else {
-	       throw new IOException("Failed to create directory " + writeFile.getParent());
+	       throw new IOException("Failed to create directory " + writeFile.getParent()); // failed to create directory.
 	   } 
 	   }
 	   
-	   out = new BufferedOutputStream(new FileOutputStream(writeFile));
+	   out = new BufferedOutputStream(new FileOutputStream(writeFile)); // then uses the file to write in whatever we receive from server.
 	   
    }
    
    
-   
+   /**
+    * Initializes BufferedInputStream to the given filename/path given by user.
+    */
    public void CreateInStream() throws FileNotFoundException, IOException
    {
-	   
+	   // to be able to read from filename/path 
 	   in = new BufferedInputStream(new FileInputStream(filename));
 
    }
@@ -120,7 +136,12 @@ public class Client {
    //////////////////////////////////// Read Request Handler ////////////////////////////////////////////
    //////////////////////////////////////////////////////////////////////////////////////////////////////
    //////////////////////////////////////////////////////////////////////////////////////////////////////
-   
+   /**
+    * First it establishes the connection between the client and the host
+    * Then it transfers the file from/to host.
+    * returns true if the read file transfer is complete.
+    * returns false if something weird happened.
+    */
    public boolean readRequestHandler(){
 	   byte[] data = new byte[516];
 	   byte[] ack = {0,4,0,0};
@@ -214,7 +235,12 @@ public class Client {
    //////////////////////////////////// Write Request Handler////////////////////////////////////////////
    //////////////////////////////////////////////////////////////////////////////////////////////////////
    //////////////////////////////////////////////////////////////////////////////////////////////////////
-   
+   /**
+    * First it establishes the connection between the client and the host
+    * Then it transfers the file from/to host.
+    * returns true if the write transfer file is complete.
+    * returns false if something weird happened.
+    */
    public boolean writeRequestHandler(){
 	   byte[] data = new byte[516];
 	   byte[] ack = {0,4,0,0};
@@ -226,8 +252,10 @@ public class Client {
 		   e.printStackTrace();
 		   System.exit(1);
 	   }
+	   // prepareing the receive packet to receive the acknowledge.
 	   receivePacket = new DatagramPacket(ack, ack.length);
 	   try {
+	    // preparing to read from file
 		CreateInStream();
 	} catch (FileNotFoundException e) {
 		e.printStackTrace();
@@ -237,11 +265,12 @@ public class Client {
 	   try {
 		boolean finished = false;
 		byte[] read = new byte[512];
-		
 		int n;
+		
 		while(!finished){
 
 			// condition to check if we aren't done yet from reading.
+			// read() returns -1 if we have no more data to be read from the file.
 			if((n = in.read(read,0,read.length))!= -1 ){
 				
 				// we're expecting a ACK of block# 0.
@@ -355,14 +384,18 @@ public class Client {
 		    	sendPort = 23;
 		   	}
 		    Client c = new Client();
+		    boolean check = false;
 		    if(request){
-		    	c.readRequestHandler();
+		    	check = c.readRequestHandler();
+		    	if(check)
+		    	    System.out.println("File Read complete.");
 		    }else{
-		    	c.writeRequestHandler();
+		    	check = c.writeRequestHandler();
+		    	if(check)
+		    	System.out.println("File Write complete.");
 		    }
-            
-           
-           
+
+		    
            // We're finished, so close the socket.
            sendReceiveSocket.close();
  
