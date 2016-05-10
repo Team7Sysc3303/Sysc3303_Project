@@ -44,7 +44,7 @@ Client Select Options:
 ----------------------
 1. Read File
 2. Write File
-3. Exit File
+3. Quit File
 ----------------------
 
 1. Type "Read", "Write" or "Q"  to select one of the three options stated above. The following instructions will then be shown on the console:
