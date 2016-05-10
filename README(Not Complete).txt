@@ -28,26 +28,10 @@ Responsibilities
 
 Set up and Test Instructions
 ----------------------------
-1. Extract sysc3303Project-i1.
+1. Extract the zipped project folder.
 2. luanch Eclipse, click on open project and select the extracted file.
 3. Open 3 console windows in Eclipse to see all three outputs of the classes.
 4. Run the Server.java class first and Intermediate.java second and then run the Client.java class.
-
-5. Folders "/TFTP-Server-Storage-Folder" and "/TFTP-Client-Storage-Folder"
-will be created automatically under your home. This is the location where
-the resulting files will be saved under. 
-Server folder has files uploaded from the client to the server.
-Client folder has files downloaded from the server to the client
-
-//Check this part after testing the code...
-...................................................
-If you're on windows it is:
-C:\Users\<user name>\TFTP-Server-Storage-Folder
-C:\Users\<user name>\TFTP-Client-Storage-Folder
-If you're on linux it is
-/Users/username/TFTP-Server-Storage-Folder
-/Users/username/TFTP-Client-Storage-Folder
-...................................................
 
 
 Usage Instructions
@@ -56,38 +40,32 @@ Usage Instructions
 You'll be primarily interfacing with Client.java. 
 
 
-Client Select Option:
+Client Select Options:
 ----------------------
 1. Read File
 2. Write File
 3. Exit File
+----------------------
 
-Select option : 
+1. Type "Read", "Write" or "Q"  to select one of the three options stated above. The following instructions will then be shown on the console:
 
-1. Type "Read", "Write" or "Q"  to select one of the three options stated above.
-
-Select option:
+E.g.
 Client: Enter the type of request (Read/ Write) [Press Q to shutdown]:
 
 Read
 
 Client: Enter File name, with extension (e.g .txt) [Press Q to shutdown]:
 
-[..........]
+2. Follow the instructions and then test it for both the read and write requests using the test files available in the project folder.
 
-Names of Test Files.
--.....
--.....
--.....
-
-// chenge 4, 5 and 6
-......................................................................
-4. Try write/read
-5. Read request: Only enter the file name into the prompt.
-6. Write request: Enter the full absolute path to your file
-......................................................................
+Names of test files to be used:
+- lessthan512.txt
+- 512.txt
+- morethan512.txt
+- 1024.txt
+- 99*512.txt
 
 
-/**
-We assume the transferring goes sequentially, i.e bloch#1 , Block#2 ... etc
-*/
+Notes: 
+- For both read and write requests, the full absolute file path needs to be entered in order for the program to work.
+- We assume the transferring goes sequentially, i.e bloch#1 , Block#2 ... etc
