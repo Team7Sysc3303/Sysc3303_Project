@@ -18,11 +18,11 @@ Suhib Habush - 100898373
 Responsibilities
 ----------------
 
-- Abdulrahman: Helped in implenting the client class + responsibe for the UML-class and UCM
+- Abdulrahman: Helped in implenting the client class + responsibe for the UML class diagram and UCM
 - Denis: Implemented the Server class (indicate your part exaxtly)
 - Franklin: Implemented the Server class (indicate your part exaxtly)
 - Hussain: Implemented client class
-- Omar: Helped in implenting the client class + responsibe for the UML-class and UCM
+- Omar: Helped in implenting the client class + responsibe for the UML class diagram and UCM
 - Suhib: Implemented the Server class (Listener)
 
 
