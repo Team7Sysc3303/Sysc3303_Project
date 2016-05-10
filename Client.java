@@ -1,8 +1,8 @@
- // TFTPClient.java
+// TFTPClient.java
 // This class is the client side for a very simple assignment based on TFTP on
 // UDP/IP. The client uses one port and sends a read or write request and gets 
 // the appropriate response from the server.  No actual file transfer takes place.   
-
+package iteration1;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -10,9 +10,13 @@ import java.util.*;
 public class Client {
 
    private DatagramPacket sendPacket, receivePacket;
-   private DatagramSocket sendReceiveSocket;
+   private static DatagramSocket sendReceiveSocket;
    private static boolean request;
    private static String filename;
+   private File writeFile;
+   BufferedInputStream in;
+   BufferedOutputStream out;
+   private static int sendPort;
    // we can run in normal (send directly to server) or test
    // (send to simulator) mode
    public static enum Mode { NORMAL, TEST};
@@ -30,180 +34,309 @@ public class Client {
       }
    }
 
-   public void sendAndReceive()
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////  Methods ////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   
+   
+   public DatagramPacket constructRRQ(byte[] data){
+	   data[0] = 0; data[1] = 1;
+	   System.arraycopy(filename.getBytes(), 0, data, 2, filename.length());
+	   data[filename.length()+2] = 0;
+	   System.arraycopy("octet".getBytes(), 0, data, filename.length()+3, "octet".length());
+	   int len = filename.length() + "octet".length() + 4;
+	   data[len-1] = 0;
+	   DatagramPacket p = null;
+	   try{
+		   p = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), sendPort);
+	   }catch(IOException e){
+		   e.printStackTrace();
+		   System.exit(1);
+	   }
+	   return p;
+   }
+   
+   
+   public DatagramPacket constructWRQ(byte[] data){
+	   data[0] = 0; data[1] = 2;
+	   System.arraycopy(filename.getBytes(), 0, data, 2, filename.length());
+	   data[filename.length()+2] = 0;
+	   System.arraycopy("octet".getBytes(), 0, data, filename.length()+3, "octet".length());
+	   int len = filename.length() + "octet".length() + 4;
+	   data[len-1] = 0;
+	   DatagramPacket p = null;
+	   try{
+		   p = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), sendPort);
+	   }catch(IOException e){
+		   e.printStackTrace();
+		   System.exit(1);
+	   }
+	   return p;
+   }
+   
+   public void updateACK(byte first, byte second, byte[] data){
+	   //first and second bytes of ACK + 1 and stored into data block#;
+	   
+	   if(Byte.toUnsignedInt(new Byte(second)) != 255){
+		   int newSecond = Byte.toUnsignedInt(new Byte(second)) + 1;
+		   data[3] = (byte) newSecond;
+		   
+	   }else if(Byte.toUnsignedInt(new Byte(first)) == 0 && Byte.toUnsignedInt(new Byte(second)) == 255){
+		   int newFirst = Byte.toUnsignedInt(new Byte(first)) + 1;
+		   data[2] = (byte) newFirst ; data[3] = 0;
+	   }else{
+		   System.out.println("Transfer is out of block numbers boundry");
+	   }
+
+   }
+   public void CreateOutStream() throws FileNotFoundException, IOException
    {
-      byte[] msg = new byte[516], // message we send
-             fn, // filename as an array of bytes
-             md, // mode as an array of bytes
-             data; // reply as array of bytes
-      String mode; // filename and mode as Strings
-      int j, len, sendPort;
-      
-      // In the assignment, students are told to send to 23, so just:
-      // sendPort = 23; 
-      // is needed.
-      // However, in the project, the following will be useful, except
-      // that test vs. normal will be entered by the user.
-      Mode run = Mode.TEST; // change to NORMAL to send directly to server  // change it to TEST.
-      
-      	if (run==Mode.NORMAL) {
-         sendPort = 69;
-         System.out.println("Client: mode is Normal");
-      	}else{
-    	 System.out.println("Client: mode is Test");
-         sendPort = 23;
-   		}
-      // sends 10 packets -- 5 reads, 5 writes, 1 invalid
 
+	   writeFile = new File("Directory\\test2.txt");
+	   if(!writeFile.exists()){
+	   if (writeFile.getParentFile().mkdir()) {
+	       writeFile.createNewFile();
+	   } else {
+	       throw new IOException("Failed to create directory " + writeFile.getParent());
+	   } 
+	   }
+	   
+	   out = new BufferedOutputStream(new FileOutputStream(writeFile));
+	   
+   }
+   
+   
+   
+   public void CreateInStream() throws FileNotFoundException, IOException
+   {
+	   
+	   in = new BufferedInputStream(new FileInputStream(filename));
 
-         System.out.println("Client: creating packet.");
-         
-         // Prepare a DatagramPacket and send it via sendReceiveSocket
-         // to sendPort on the destination host (also on this machine).
+   }
+   
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////// Read Request Handler ////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   
+   public boolean readRequestHandler(){
+	   byte[] data = new byte[516];
+	   byte[] ack = {0,4,0,0};
+	   
+	   // sending a read Request // 
+	   try{
+		   sendReceiveSocket.send(constructRRQ(data));
+	   }catch(IOException e){
+		   e.printStackTrace();
+		   System.exit(1);
+	   }
+	   // Waiting for Data //
+	   receivePacket = new DatagramPacket(data, data.length); 
+	   try{
+		   sendReceiveSocket.receive(receivePacket);
+	   }catch(IOException e){
+		   e.printStackTrace();
+		   System.exit(1);
+	   }
+	   // checking if its Data.
+	   if(data[1] != 3 && data[0] != 0){
+		   System.out.println("We received invalid Data packet (OP-error!).");
+		   System.exit(1);
+	   }
+	   // writing what we got into file given in filename //
+	   data = receivePacket.getData(); // ensures that the data received is in data[].
 
-         // if i even (2,4,6,8,10), it's a read; otherwise a write
-         // (1,3,5,7,9) opcode for read is 01, and for write 02
-         // And #11 is invalid (opcode 07 here -- could be anything)
+	   try {
+		CreateOutStream();
+	} catch (FileNotFoundException e) {
+		e.printStackTrace();
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
+	   try {
+		boolean finished = false;
+		byte[] write = new byte[512];
+		System.arraycopy(data, 4, write, 0, data.length);
+		while(!finished){
+			   // do transfer. and also send and receive till we finish.
+			out.write(write);
+			
+			// check if we have to loop again. or we reached our end of transfer.
+			if(receivePacket.getLength() < 512){
+				// prepare to stop writing. and send the last ACK.
+				out.close();
+				finished = true;
+				try{
+					System.arraycopy(data, 2, ack, 2, 2);
+					sendReceiveSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(),
+					   								sendPort));
+				}catch(IOException e){
+					e.printStackTrace();
+					System.exit(1);
+				}
+			}else{ // else we are still have to do more transfers.
+				
+				try{
+					System.arraycopy(data, 2, ack, 2, 2);
+					sendReceiveSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(),
+					   								sendPort));
+				}catch(IOException e){
+					e.printStackTrace();
+					System.exit(1);
+				}
+				// after sending the ACK, we're expecting DATA.
+				try{
+					
+					 sendReceiveSocket.receive(receivePacket);
+				}catch(IOException e){
+					e.printStackTrace();
+					System.exit(1);
+				}
+				// after receiving the new data, we should update the write array. with the new one.
+				System.arraycopy(receivePacket.getData(), 4, write, 0, receivePacket.getLength());
 
-        msg[0] = 0;
-        if(request) // checking for read
-           msg[1]=1;
-        else // if not, its write.
-           msg[1]=2;
+			}
 
+	    }// end while
+		return true; // we finished our RRQ transfer.
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
 
-        // convert to bytes
-        fn = filename.getBytes();
-        
-        // and copy into the msg
-        System.arraycopy(fn,0,msg,2,fn.length);
-        // format is: source array, source index, dest array,
-        // dest index, # array elements to copy
-        // i.e. copy fn from 0 to fn.length to msg, starting at
-        // index 2
-        
-        // now add a 0 byte
-        msg[fn.length+2] = 0;
+	   return false; // Something weird happened, RRQ transfer connection failed.
+   }
+   
 
-        // now add "octet" (or "netascii")
-        mode = "octet";
-        // convert to bytes
-        md = mode.getBytes();
-        
-        // and copy into the msg
-        System.arraycopy(md,0,msg,fn.length+3,md.length);
-        
-        len = fn.length+md.length+4; // length of the message
-        // length of filename + length of mode + opcode (2) + two 0s (2)
-        // second 0 to be added next:
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////// Write Request Handler////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   
+   public boolean writeRequestHandler(){
+	   byte[] data = new byte[516];
+	   byte[] ack = {0,4,0,0};
+	   data[0] = 0; data[1] = 3;
+	   // sending a write Request // 
+	   try{
+		   sendReceiveSocket.send(constructWRQ(data));
+	   }catch(IOException e){
+		   e.printStackTrace();
+		   System.exit(1);
+	   }
+	   receivePacket = new DatagramPacket(ack, ack.length);
+	   try {
+		CreateInStream();
+	} catch (FileNotFoundException e) {
+		e.printStackTrace();
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
+	   try {
+		boolean finished = false;
+		byte[] read = new byte[512];
+		
+		int n;
+		while(!finished){
 
-        // end with another 0 byte 
-        msg[len-1] = 0;
+			// condition to check if we aren't done yet from reading.
+			if((n = in.read(read,0,read.length))!= -1 ){
+				
+				// we're expecting a ACK of block# 0.
+				try{
+					 sendReceiveSocket.receive(receivePacket);
+				}catch(IOException e){
+					e.printStackTrace();
+					System.exit(1);
+				}
+				// checking if its not Ack.
+				if(ack[1] != 4 && ack[0] != 0){
+					System.out.println("We received invalid ACK packet (OP-error!).");
+					System.exit(1);
+				}
+				// we need to update the data block # corresponding to the ACK block #;
+				updateACK(receivePacket.getData()[2], receivePacket.getData()[3], data);
+				// now read has the data, data has the first 4 bytes ready. therefore;
+				System.arraycopy(read, 0, data, 4, read.length);
+				// data is read to be sent.
+				// sending the data packet block# 0//
+				try{
+					sendReceiveSocket.send(new DatagramPacket(data, data.length, InetAddress.getLocalHost(), sendPort));
+				}catch(IOException e){
+					e.printStackTrace();
+					System.exit(1);
+				}
+				
+			}else{ 
+				// prepare to stop reading. and wait the last ACK.
+				in.close();
+				finished = true;
+				try{
+					sendReceiveSocket.receive(receivePacket);
+				}catch(IOException e){
+					e.printStackTrace();
+					System.exit(1);
+				}
+				// checking if its not ACK.
+				if(ack[1] != 4 && ack[0] != 0){
+					System.out.println("We received invalid ACK packet (OP-error!).");
+					System.exit(1);
+				}
+			}
+	    }// end while
+		return true; // we finished our WRQ transfer.
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
 
-        // Construct a datagram packet that is to be sent to a specified port
-        // on a specified host.
-        // The arguments are:
-        //  msg - the message contained in the packet (the byte array)
-        //  the length we care about - k+1
-        //  InetAddress.getLocalHost() - the Internet address of the
-        //     destination host.
-        //     In this example, we want the destination to be the same as
-        //     the source (i.e., we want to run the client and server on the
-        //     same computer). InetAddress.getLocalHost() returns the Internet
-        //     address of the local host.
-        //  69 - the destination port number on the destination host.
-        try {
-           sendPacket = new DatagramPacket(msg, len,
-                               InetAddress.getLocalHost(), sendPort);
-        } catch (UnknownHostException e) {
-           e.printStackTrace();
-           System.exit(1);
-        }
+	   return false; // Something weird happened, WRQ transfer connection failed.
 
-        System.out.println("Client: sending packet.");
-        System.out.println("To host: " + sendPacket.getAddress());
-        System.out.println("Destination host port: " + sendPacket.getPort());
-        len = sendPacket.getLength();
-        System.out.println("Length: " + len);
-        System.out.println("Containing: ");
-        for (j=0;j<len;j++) {
-            System.out.println("byte " + j + " " + msg[j]);
-        }
-        
-        // Form a String from the byte array, and print the string.
-        String sending = new String(msg,0,len);
-        System.out.println(sending);
-
-        // Send the datagram packet to the server via the send/receive socket.
-
-        try {
-           sendReceiveSocket.send(sendPacket);
-        } catch (IOException e) {
-           e.printStackTrace();
-           System.exit(1);
-        }
-
-        System.out.println("Client: Packet sent.");
-
-        // Construct a DatagramPacket for receiving packets up
-        // to 516 bytes long (the length of the byte array).
-
-        data = new byte[516];
-        receivePacket = new DatagramPacket(data, data.length);
-
-        System.out.println("Client: Waiting for packet.");
-        try {
-           // Block until a datagram is received via sendReceiveSocket.
-           sendReceiveSocket.receive(receivePacket);
-        } catch(IOException e) {
-           e.printStackTrace();
-           System.exit(1);
-        }
-
-        // Process the received datagram.
-        System.out.println("Client: Packet received:");
-        System.out.println("From host: " + receivePacket.getAddress());
-        System.out.println("Host port: " + receivePacket.getPort());
-        len = receivePacket.getLength();
-        System.out.println("Length: " + len);
-        System.out.println("Containing: ");
-        for (j=0;j<len;j++) {
-            System.out.println("byte " + j + " " + data[j]);
-        }
-        
-        System.out.println();
-
-      
-
-      // We're finished, so close the socket.
-      sendReceiveSocket.close();
    }
 
+   
+   
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   /////////////////////////////////////////     Main    ////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   //////////////////////////////////////////////////////////////////////////////////////////////////////
+   
+   
    public static void main(String args[])
    {
+	   
 	   String requestType;
-	   Scanner in = new Scanner(System.in);
+	   Scanner input = new Scanner(System.in);
        // loop for ever till user types Q to shutdown.
 	   for(;;){
 		   
-		   
+	    for(;;){ // inner loop for inputs.
 		   System.out.println("Client: Enter the type of request (Read/ Write) [Press Q to shutdown]: ");
-			   requestType = in.next();
+			   requestType = input.next();
 			   System.out.println("You entered:" + requestType + ".");
 		   // checks if the user wants to shutdown.
 		   if(requestType.equalsIgnoreCase("Q")){
 			   System.out.println("Client: Shutting Down..");
 		   		System.exit(1);
 	       }
+		   
 		   // Adjusting the boolean values so we use that to determine whether its read or write requests.
 		   if(requestType.equalsIgnoreCase("Read")){
 			   request = true;
-		   }else{
+			   break;
+		   }else if(requestType.equalsIgnoreCase("Write")){
 			   request = false;
+			   break;
+		   }else{
+			   System.out.println("Entered request type is invalid. try again. [Press Q to shutdown]");
+			   
 		   }
-		   
-		   System.out.println("Client: Enter File name, with extension (e.g .txt) [Press Q to shutdown]: ");
-		   filename = in.next();
+	    }// inner loop for type inputs.
+		   System.out.println("Client: Enter the file directory and file name (with extension) [Press Q to shutdown]: ");
+		   filename = input.next();
 		   System.out.println("You entered:" + filename + ".");
 		   // checks if the user wants to shutdown.
 		   if(filename.equalsIgnoreCase("Q")){
@@ -211,10 +344,30 @@ public class Client {
 		   		System.exit(1);
 	       }
 		   
+	    
 		   System.out.println("Client: Processing your request...");
-           Client c = new Client();
-           c.sendAndReceive();
+		    Mode run = Mode.TEST; // change to NORMAL to send directly to server  // change it to TEST.
+		      
+		    if (run==Mode.NORMAL) {
+		        sendPort = 69;
+		         System.out.println("Client: mode is Normal");
+		    }else{
+		    	System.out.println("Client: mode is Test");
+		    	sendPort = 23;
+		   	}
+		    Client c = new Client();
+		    if(request){
+		    	c.readRequestHandler();
+		    }else{
+		    	c.writeRequestHandler();
+		    }
+            
            
-	   }
+           
+           // We're finished, so close the socket.
+           sendReceiveSocket.close();
+ 
+	}
+	   
    }
 }
