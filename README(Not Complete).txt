@@ -18,12 +18,12 @@ Suhib Habush - 100898373
 Responsibilities
 ----------------
 
-- Abdulrahman: 
-- Denis: 
-- Franklin: 
-- Hussain: 
-- Omar: 
-- Suhib: 
+- Abdulrahman: Helped in implenting the client class + responsibe fro the UML-class and UCM
+- Denis: Implemented the Server class (indicate your part exaxtly)
+- Franklin: Implemented the Server class (indicate your part exaxtly)
+- Hussain: Implemented client class
+- Omar: Helped in implenting the client class + responsibe fro the UML-class and UCM
+- Suhib: Implemented the Server class (Listener)
 
 
 Set up and Test Instructions
@@ -38,13 +38,16 @@ will be created automatically under your home. This is the location where
 the resulting files will be saved under. 
 Server folder has files uploaded from the client to the server.
 Client folder has files downloaded from the server to the client
+
+//Check this part after testing the code...
+...................................................
 If you're on windows it is:
 C:\Users\<user name>\TFTP-Server-Storage-Folder
 C:\Users\<user name>\TFTP-Client-Storage-Folder
 If you're on linux it is
 /Users/username/TFTP-Server-Storage-Folder
 /Users/username/TFTP-Client-Storage-Folder
-
+...................................................
 
 
 Usage Instructions
@@ -52,10 +55,9 @@ Usage Instructions
 
 You'll be primarily interfacing with Client.java. 
 
+
+Client Select Option:
 ----------------------
-| Client Select Menu |
-----------------------
-Options : 
 1. Read File
 2. Write File
 3. Exit File
