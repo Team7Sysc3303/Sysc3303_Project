@@ -25,6 +25,7 @@ public class Server implements Runnable {
    private DatagramSocket receiveSocket, sendSocket;
    private byte data[];
    private volatile boolean StopTransfer = false;
+   private String filename="", mode="";
 
    public Server()
    {
@@ -38,13 +39,44 @@ public class Server implements Runnable {
 		   System.exit(1);
 	   }
    }
-   
+ /*public void checkForError(byte[] data)
+ {
+	 //byte [] data;
+	 
+	 Request req=Request.ERROR;
+	 int i = 0, s=0;
+	 int len = receivePacket.getLength();
+	// String filename = "", mode = "";
+	 
+	 if (req!=Request.ERROR) { // check for filename
+         // search for next all 0 byte
+         for(i=2;i<len;i++) {
+             if (data[i] == 0) break;
+        }
+        if (i==len) req=Request.ERROR; // didn't find a 0 byte
+        if (i==2) req=Request.ERROR; // filename is 0 bytes long
+        // otherwise, extract filename
+        System.out.println("gt"+(filename = new String(data,2,i-2)));
+     }
+
+     if(req!=Request.ERROR) { // check for mode
+         // search for next all 0 byte
+         for(s=i+1;s<len;s++) { 
+             if (data[s] == 0) break;
+        }
+        if (s==len) req=Request.ERROR; // didn't find a 0 byte
+        if (s==i+1) req=Request.ERROR; // mode is 0 bytes long
+        mode = new String(data,i,s-i-1);
+     }
+     
+     if(s!=len-1) req=Request.ERROR; // other stuff at end of packet 
+ }*/
  public void listener()
    
    {
 	   byte [] data;
 	   int i, s=0, counter=0;
-	   String filename, mode;
+	 //  String filename = "", mode = "";
 	   Request req; // READ, WRITE or ERROR
 	   
 	   for(;;) { // loop forever
@@ -84,38 +116,80 @@ public class Server implements Runnable {
 	         // If it's a write, send back ACK (04) block 0
 	         // Otherwise, ignore it
 	         if (data[0]!=0) req = Request.ERROR; // bad
-	         else if (data[1]==1) req = Request.READ; // could be read
-	         else if (data[1]==4) req = Request.READ; // could be acknoledgment
-	         else if (data[1]==2) req = Request.WRITE; // could be write
+	         else if (data[1]==1)
+	        	 {
+	        	 req = Request.READ; // could be read
+	        	 //checkForError(data);
+	        	 if (req!=Request.ERROR) { // check for filename
+		             // search for next all 0 byte
+		             for(i=2;i<len;i++) {
+		                 if (data[i] == 0) break;
+		            }
+		            if (i==len) req=Request.ERROR; // didn't find a 0 byte
+		            if (i==2) req=Request.ERROR; // filename is 0 bytes long
+		            // otherwise, extract filename
+		            System.out.println("gt"+(filename = new String(data,2,i-2)));
+		         }
+
+		         if(req!=Request.ERROR) { // check for mode
+		             // search for next all 0 byte
+		             for(s=i+1;s<len;s++) { 
+		                 if (data[s] == 0) break;
+		            }
+		            if (s==len) req=Request.ERROR; // didn't find a 0 byte
+		            if (s==i+1) req=Request.ERROR; // mode is 0 bytes long
+		            mode = new String(data,i,s-i-1);
+		            Thread responseThread = new Thread (new ResponseHandler(req, receivePacket, filename, mode), "ThreadSend" + counter);//new
+		            responseThread.start();//new
+		         }
+		         
+		         if(s!=len-1) req=Request.ERROR; // other stuff at end of packet 
+	        	 }
+	        	 else if (data[1]==4) 
+	        	 {
+	        		 if (data[2]==0 && data[3]==0)
+	        		 {
+	        			 req = Request.ERROR;
+	        		 }
+	        	 else  req = Request.READ; // could be acknoledgment
+	        	 }
+	         else if (data[1]==2)
+	        	 {
+	        	 req = Request.WRITE; // could be write
+	        	 //checkForError(data);
+	        	 if (req!=Request.ERROR) { // check for filename
+		             // search for next all 0 byte
+		             for(i=2;i<len;i++) {
+		                 if (data[i] == 0) break;
+		            }
+		            if (i==len) req=Request.ERROR; // didn't find a 0 byte
+		            if (i==2) req=Request.ERROR; // filename is 0 bytes long
+		            // otherwise, extract filename
+		            System.out.println("gt"+(filename = new String(data,2,i-2)));
+		         }
+
+		         if(req!=Request.ERROR) { // check for mode
+		             // search for next all 0 byte
+		             for(s=i+1;s<len;s++) { 
+		                 if (data[s] == 0) break;
+		            }
+		            if (s==len) req=Request.ERROR; // didn't find a 0 byte
+		            if (s==i+1) req=Request.ERROR; // mode is 0 bytes long
+		            mode = new String(data,i,s-i-1);
+		            Thread responseThread = new Thread (new ResponseHandler(req, receivePacket, filename, mode), "ThreadSend" + counter);//new
+		            responseThread.start();//new
+		         }
+		         
+		         if(s!=len-1) req=Request.ERROR; // other stuff at end of packet 
+	        	 }
 	         else if (data[1]==3) req = Request.WRITE; // could be data, Client writing to the server
 	         else req = Request.ERROR; // bad
 
-	         if (req!=Request.ERROR) { // check for filename
-	             // search for next all 0 byte
-	             for(i=2;i<len;i++) {
-	                 if (data[i] == 0) break;
-	            }
-	            if (i==len) req=Request.ERROR; // didn't find a 0 byte
-	            if (i==2) req=Request.ERROR; // filename is 0 bytes long
-	            // otherwise, extract filename
-	            filename = new String(data,2,i-2);
-	         }
-	 
-	         if(req!=Request.ERROR) { // check for mode
-	             // search for next all 0 byte
-	             for(s=i+1;s<len;s++) { 
-	                 if (data[s] == 0) break;
-	            }
-	            if (s==len) req=Request.ERROR; // didn't find a 0 byte
-	            if (s==i+1) req=Request.ERROR; // mode is 0 bytes long
-	            mode = new String(data,i,s-i-1);
-	         }
-	         
-	         if(s!=len-1) req=Request.ERROR; // other stuff at end of packet   
+	   
 	         	
-	         Thread responseThread = new Thread (new ResponseHandler(req, receivePacket), "ThreadSend" + counter);
+	        // Thread responseThread = new Thread (new ResponseHandler(req, receivePacket, filename, mode), "ThreadSend" + counter);
 	         counter ++;
-	         responseThread.start();
+	        // responseThread.start();
 	   
 	   }
    }
