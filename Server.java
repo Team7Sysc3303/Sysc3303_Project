@@ -3,6 +3,7 @@
 // UDP/IP. The server receives a read or write packet from a client and
 // sends back the appropriate response without any actual file transfer.
 // One socket (69) is used to receive (it stays open) and another for each response. 
+package iteration1;
 
 import java.io.*;
 import java.net.*;
@@ -105,7 +106,7 @@ public class Server implements Runnable {
 	         
 	         // print the bytes
 	         for ( i=0;i<len;i++) {
-	            System.out.println("byte " + i + " " + data[i]);
+	            System.out.print(data[i] + " ");
 	         }
 
 	         // Form a String from the byte array.
