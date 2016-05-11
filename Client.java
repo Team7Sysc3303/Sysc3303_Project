@@ -185,7 +185,8 @@ public class Client {
 			out.write(write);
 			
 			// check if we have to loop again. or we reached our end of transfer.
-			if(receivePacket.getLength() < 512){
+			// checks if the receivedPacket length is less than the (data sent + the op code 4 bytes = 516)
+			if(receivePacket.getLength() < 516){
 				// prepare to stop writing. and send the last ACK.
 				out.close();
 				finished = true;
