@@ -68,6 +68,14 @@ public class ResponseHandler implements Runnable {
 				else {
 					in.close();
 					finished=true;
+					/* we added this also */
+					try{
+						sendSocket.receive(receivePacket);
+					}catch(IOException e){
+						e.printStackTrace();
+						System.exit(1);
+					}
+					/*   ----    */
 				}
 				
 				return responseR;
