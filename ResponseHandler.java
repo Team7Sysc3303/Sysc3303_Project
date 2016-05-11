@@ -1,3 +1,5 @@
+package iteration1;
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -14,7 +16,7 @@ public class ResponseHandler implements Runnable {
 	private BufferedOutputStream out;
 	private boolean finished=false;
 	private File writeFile;
-	
+	private int n;
 	public ResponseHandler(Server.Request req, DatagramPacket receive,
 												String name, String mod){
 		request=req;
@@ -38,8 +40,9 @@ public class ResponseHandler implements Runnable {
 		byte[] responseR =new byte[516];//byte array for read response (with 512 byte data)
 		byte[] responseW =new byte[4];//byte array for ACK for write response;
 		byte[] data=new byte[512];
-		int n=0, offset=0;//for length of write forming
+		int offset=0;//for length of write forming
 		//read request
+		n = 0;
 		//System.out.println("Inside FormMsg"+" "+request+"1"+filename+"1");
 		if (request==Server.Request.READ){
 			System.out.println("read if");
@@ -58,13 +61,15 @@ public class ResponseHandler implements Runnable {
 				if(data==null) System.out.println("byte - null");
 				if(in==null) System.out.println("buffer - null");
 				if (data!=null&&in!=null)
-					n = in.read(data,0,data.length);//get n bytes in data (512 or less)
+					n = in.read(data);//,0,data.length);//get n bytes in data (512 or less)
+				    System.out.println("Value of N is: "+ n);
 				if(n!=-1)
 					System.arraycopy(data,0,responseR,4,n);//append data part to message
 				else {
 					in.close();
 					finished=true;
 				}
+				
 				return responseR;
 			//}				
 		} else if (request==Server.Request.WRITE){
@@ -150,7 +155,7 @@ public class ResponseHandler implements Runnable {
 			//System.out.println("I/O Error: "+ie);
 			ie.printStackTrace();
 		}
-		sendPacket = new DatagramPacket(response, response.length,
+		sendPacket = new DatagramPacket(response, n+4 /*response.length*/,
                 receivePacket.getAddress(), receivePacket.getPort());
 
 		System.out.println("Server: Sending packet:");
@@ -160,7 +165,7 @@ public class ResponseHandler implements Runnable {
 		System.out.println("Length: " + len);
 		System.out.println("Containing: ");
 		for (int j=0;j<len;j++) {
-			System.out.println("byte " + j + " " + response[j]);
+			 System.out.print(response[j] + " ");
 		}
 
 		// Send the datagram packet to the client via a new socket.
