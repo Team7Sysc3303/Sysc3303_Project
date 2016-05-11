@@ -1,3 +1,4 @@
+package iteration1;
 // TFTPClient.java
 // This class is the client side for a very simple assignment based on TFTP on
 // UDP/IP. The client uses one port and sends a read or write request and gets 
@@ -89,6 +90,7 @@ public class Client {
 	   if(Byte.toUnsignedInt(new Byte(second)) != 255){
 		   int newSecond = Byte.toUnsignedInt(new Byte(second)) + 1;
 		   data[3] = (byte) newSecond;
+		   data[2] = 0;
 		   
 	   }else if(Byte.toUnsignedInt(new Byte(first)) == 0 && Byte.toUnsignedInt(new Byte(second)) == 255){
 		   int newFirst = Byte.toUnsignedInt(new Byte(first)) + 1;
@@ -148,7 +150,7 @@ public class Client {
 	   
 	   // sending a read Request // 
 	   try{
-		   sendReceiveSocket.send(constructRRQ(data));
+		   sendReceiveSocket.send(constructRRQ(new byte[516]));
 	   }catch(IOException e){
 		   e.printStackTrace();
 		   System.exit(1);
@@ -161,7 +163,7 @@ public class Client {
 		   e.printStackTrace();
 		   System.exit(1);
 	   }
-	   arraycopy(receivePacket.getData(), 0, data, 0, receivePacket.getLength()); // ensures that the data received is in data[].
+	   System.arraycopy(receivePacket.getData(), 0, data, 0, receivePacket.getLength()); // ensures that the data received is in data[].
 	   // checking if its Data.
 	   if(data[1] != 3 && data[0] != 0){
 		   System.out.println("We received invalid Data packet (OP-error!).");
@@ -187,7 +189,9 @@ public class Client {
 			// checks if the receivedPacket length is less than the (data sent + the op code 4 bytes = 516)
 			if(receivePacket.getLength() < 516){
 				// prepare to stop writing. and send the last ACK.
+				out.flush();
 				out.close();
+				
 				finished = true;
 				try{
 					System.arraycopy(data, 2, ack, 2, 2);
@@ -216,8 +220,9 @@ public class Client {
 					System.exit(1);
 				}
 				// after receiving the new data, we should update the write array. with the new one.
-				System.arraycopy(receivePacket.getData(), 4, write, 0, receivePacket.getLength());
-
+				if(receivePacket.getLength() >= 4){
+				System.arraycopy(receivePacket.getData(), 4, write, 0, receivePacket.getLength()-4);
+				}
 			}
 
 	    }// end while
@@ -247,7 +252,7 @@ public class Client {
 	   data[0] = 0; data[1] = 3;
 	   // sending a write Request // 
 	   try{
-		   sendReceiveSocket.send(constructWRQ(data));
+		   sendReceiveSocket.send(constructWRQ(new byte[516]));
 	   }catch(IOException e){
 		   e.printStackTrace();
 		   System.exit(1);
@@ -265,14 +270,14 @@ public class Client {
 	   try {
 		boolean finished = false;
 		byte[] read = new byte[512];
-		int n;
 		
+		int n;
 		while(!finished){
 
 			// condition to check if we aren't done yet from reading.
 			// read() returns -1 if we have no more data to be read from the file.
-			if((n = in.read(read,0,read.length))!= -1 ){
-				
+			if((n=in.read(read)) != -1 ){
+				System.out.println("Value of n: " + n);
 				// we're expecting a ACK of block# 0.
 				try{
 					 sendReceiveSocket.receive(receivePacket);
@@ -292,7 +297,7 @@ public class Client {
 				// data is read to be sent.
 				// sending the data packet block# 0//
 				try{
-					sendReceiveSocket.send(new DatagramPacket(data, data.length, InetAddress.getLocalHost(), sendPort));
+					sendReceiveSocket.send(new DatagramPacket(data, 4+n , InetAddress.getLocalHost(), sendPort)); // 4(opcode and block#) + n (how many bytes we read from file)
 				}catch(IOException e){
 					e.printStackTrace();
 					System.exit(1);
