@@ -161,14 +161,13 @@ public class Client {
 		   e.printStackTrace();
 		   System.exit(1);
 	   }
+	   data = receivePacket.getData(); // ensures that the data received is in data[].
 	   // checking if its Data.
 	   if(data[1] != 3 && data[0] != 0){
 		   System.out.println("We received invalid Data packet (OP-error!).");
 		   System.exit(1);
 	   }
 	   // writing what we got into file given in filename //
-	   data = receivePacket.getData(); // ensures that the data received is in data[].
-
 	   try {
 		CreateOutStream();
 	} catch (FileNotFoundException e) {
