@@ -38,7 +38,7 @@ public void passOnTFTP()
 
    byte[] data;
    
-   int clientPort, j=0, len;
+   int clientPort, serverPort=0, j=0, len;
 
    for(;;) { // loop forever
       // Construct a DatagramPacket for receiving packets up
@@ -87,9 +87,12 @@ public void passOnTFTP()
       //     same computer). InetAddress.getLocalHost() returns the Internet
       //     address of the local host.
       //  69 - the destination port number on the destination host.
-
-      sendPacket = new DatagramPacket(data, len,
+      if (data[1]==1||data[1]==2)//WRQ or RRQ
+    	  sendPacket = new DatagramPacket(data, len,
                                      receivePacket.getAddress(), 69);
+      else if ((data[1]==3||data[1]==4)&&serverPort!=0)//DATA or ACK
+    	  sendPacket = new DatagramPacket(data, len,
+                  receivePacket.getAddress(), serverPort);
      
       System.out.println("Simulator: sending packet.");
       System.out.println("To host: " + sendPacket.getAddress());
@@ -130,6 +133,7 @@ public void passOnTFTP()
       System.out.println("From host: " + receivePacket.getAddress());
       System.out.println("Host port: " + receivePacket.getPort());
       len = receivePacket.getLength();
+      serverPort=receivePacket.getPort();
       System.out.println("Length: " + len);
       System.out.println("Containing: ");
       for (j=0;j<len;j++) {
@@ -153,7 +157,7 @@ public void passOnTFTP()
       //     so we extract the port that the client used to send us the
       //     datagram, and use that as the destination port for the TFTP
       //     packet.
-
+      
       sendPacket = new DatagramPacket(data, receivePacket.getLength(),
                             receivePacket.getAddress(), clientPort);
 
@@ -201,4 +205,3 @@ public static void main( String args[] )
    s.passOnTFTP();
 }
 }
-
