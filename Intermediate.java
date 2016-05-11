@@ -5,7 +5,7 @@
 //client.
 //One socket (23) is used to receive from the client, and another to send/receive
 //from the server.  A new socket is used for each communication back to the client.   
-
+package iteration1;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -67,7 +67,7 @@ public void passOnTFTP()
       
       // print the bytes
       for (j=0;j<len;j++) {
-         System.out.println("byte " + j + " " + data[j]);
+    	  System.out.print(data[j] + " ");
       }
 
       // Form a String from the byte array, and print the string.
@@ -101,7 +101,7 @@ public void passOnTFTP()
       System.out.println("Length: " + len);
       System.out.println("Containing: ");
       for (j=0;j<len;j++) {
-          System.out.println("byte " + j + " " + data[j]);
+    	  System.out.print(data[j] + " ");
       }
 
       // Send the datagram packet to the server via the send/receive socket.
@@ -137,7 +137,7 @@ public void passOnTFTP()
       System.out.println("Length: " + len);
       System.out.println("Containing: ");
       for (j=0;j<len;j++) {
-         System.out.println("byte " + j + " " + data[j]);
+         System.out.print(data[j] + " ");
       }
 
       // Construct a datagram packet that is to be sent to a specified port
@@ -168,7 +168,7 @@ public void passOnTFTP()
       System.out.println("Length: " + len);
       System.out.println("Containing: ");
       for (j=0;j<len;j++) {
-         System.out.println("byte " + j + " " + data[j]);
+    	  System.out.print(data[j] + " ");
       }
 
       // Send the datagram packet to the client via a new socket.
