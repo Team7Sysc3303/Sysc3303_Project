@@ -161,7 +161,7 @@ public class Client {
 		   e.printStackTrace();
 		   System.exit(1);
 	   }
-	   arraycopy(receivePacket.getData(), 0, data, 4, receivePacket.getLength()); // ensures that the data received is in data[].
+	   arraycopy(receivePacket.getData(), 0, data, 0, receivePacket.getLength()); // ensures that the data received is in data[].
 	   // checking if its Data.
 	   if(data[1] != 3 && data[0] != 0){
 		   System.out.println("We received invalid Data packet (OP-error!).");
