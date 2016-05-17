@@ -40,10 +40,28 @@ public class Client {
    //////////////////////////////////////////////////////////////////////////////////////////////////////
    //////////////////////////////////////////////////////////////////////////////////////////////////////
    /**
-    * DuplicateACK checks if the ack passed in parameter is duplicated or not.
+    * verifyACK checks if the ack passed in parameter is 
+    * duplicated or not
+    * delayed or not
+    * if both are not, then the received ack is bigger than what we expected.
     */
-   public boolean duplicateACK(DatagramPacket p, byte[] expected){
-	   
+   public boolean verifyACK(DatagramPacket p, byte[] expected){
+	   if(p.getData()[2] == expected[2] && p.getData()[3] == expected[3]){
+		   // expected received, returning true.
+		   return true;
+		   
+	   }else if(p.getData()[2] < expected[2] || p.getData()[3] < expected[3]){
+		   
+		   
+		   return false;
+		   
+		   
+	   }else{
+		   // the received ACK is bigger than the expected one.
+		   System.out.println("ACK received cannot be explained by delayed/duplicate errors.");
+		   System.out.println("Client: Shutting Down...");
+		   System.exit(1);
+	   }
 	   
 	   
 	   
@@ -278,7 +296,7 @@ public class Client {
 	   byte[] data = new byte[516];
 	   byte[] ack = {0,4,0,0};
 	   data[0] = 0; data[1] = 3;
-	   byte[] oldACK = new byte[4];
+	   byte[] oldACK = ack;
 	   boolean receivedIt = false;
 	   
 	   
@@ -305,7 +323,7 @@ public class Client {
 				sendReceiveSocket.setSoTimeout(1000);
 				sendReceiveSocket.receive(receivePacket);
 				// we received it in time, validate it.
-				if(!duplicateACK(receivePacket, ack)){
+				if(!verifyACK(receivePacket, oldACK)){
 					receivedIt = true;
 					oldACK = receivePacket.getData(); // saving the ack received.
 					break;
@@ -377,7 +395,7 @@ public class Client {
 						sendReceiveSocket.setSoTimeout(1000);
 						sendReceiveSocket.receive(receivePacket);
 						// we received it in time, validate it.
-						if(!duplicateACK(receivePacket, ack)){
+						if(!verifyACK(receivePacket, ack)){
 							receivedIt = true;
 							oldACK = receivePacket.getData(); // saving the ack received.
 							break;
