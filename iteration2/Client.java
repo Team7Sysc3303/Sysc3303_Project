@@ -39,32 +39,48 @@ public class Client {
    ////////////////////////////////////////////  Methods ////////////////////////////////////////////////
    //////////////////////////////////////////////////////////////////////////////////////////////////////
    //////////////////////////////////////////////////////////////////////////////////////////////////////
+   
+   public void updateBlockNum(byte[] data){
+	   //first and second bytes of ACK + 1 and stored into data block#;
+	   
+	   if(Byte.toUnsignedInt(new Byte(data[3])) != 255){
+		   int newSecond = Byte.toUnsignedInt(new Byte(data[3])) + 1;
+		   data[3] = (byte) newSecond;
+		   data[2] = 0;
+		   
+	   }else if(Byte.toUnsignedInt(new Byte(data[2])) == 0 && Byte.toUnsignedInt(new Byte(data[3])) == 255){
+		   int newFirst = Byte.toUnsignedInt(new Byte(data[2])) + 1;
+		   data[2] = (byte) newFirst ; data[3] = 0;
+	   }else{
+		   System.out.println("Transfer is out of block numbers boundry");
+	   }
+
+   }
+   
+   
    /**
     * verifyACK checks if the ack passed in parameter is 
     * duplicated or not
     * delayed or not
     * if both are not, then the received ack is bigger than what we expected.
     */
-   public boolean verifyACK(DatagramPacket p, byte[] expected){
+   public boolean verify(DatagramPacket p, byte[] expected){
+	   if(p.getData()[0] == expected[0] && p.getData()[1] == expected[1]){
 	   if(p.getData()[2] == expected[2] && p.getData()[3] == expected[3]){
+		   
 		   // expected received, returning true.
-		   return true;
+		   return true; // same as expected.
+
+	   }else if(p.getData()[2] < expected[2] ||( p.getData()[2] == expected[2] && p.getData()[3] < expected[3])){
 		   
-	   }else if(p.getData()[2] < expected[2] || p.getData()[3] < expected[3]){
-		   
-		   
-		   return false;
-		   
-		   
-	   }else{
-		   // the received ACK is bigger than the expected one.
-		   System.out.println("ACK received cannot be explained by delayed/duplicate errors.");
-		   System.out.println("Client: Shutting Down...");
-		   System.exit(1);
+		   return false; // duplicated.
+	   }
 	   }
 	   
-	   
-	   
+	   // the received ACK is bigger than the expected one.
+	   System.out.println("ACK received cannot be explained by delayed/duplicate errors.");
+	   System.out.println("Client: Shutting Down...");
+	   System.exit(1);
 	   return false;
    }
    
@@ -178,41 +194,11 @@ public class Client {
    public boolean readRequestHandler(){
 	   byte[] data = new byte[516];
 	   byte[] ack = {0,4,0,0};
-	   
-	   // sending a read Request // 
-	   try{
-		   sendReceiveSocket.send(constructRRQ(new byte[516]));
-	   }catch(IOException e){
-		   e.printStackTrace();
-		   System.exit(1);
-	   }
-	   // Waiting for Data //
-	   receivePacket = new DatagramPacket(data, data.length); 
-	   try{
-		   sendReceiveSocket.receive(receivePacket);
-	   }catch(IOException e){
-		   e.printStackTrace();
-		   System.exit(1);
-	   }
-	   System.arraycopy(receivePacket.getData(), 0, data, 0, receivePacket.getLength()); // ensures that the data received is in data[].
-	   // checking if its Data.
-	   if(data[1] != 3 && data[0] != 0){
-		   System.out.println("We received invalid Data packet (OP-error!).");
-		   System.exit(1);
-	   }
-	   /* printing what we received */
-		System.out.println("Client: Data received:");
-		System.out.println("To host: " + receivePacket.getAddress());
-		System.out.println("Destination host port: " + receivePacket.getPort());
-		int len = receivePacket.getLength();
-		System.out.println("Length: " + len);
-		System.out.println("Containing: ");
-		for (int j=0;j<len;j++) {
-			 System.out.print(data[j] + " ");
-		}
-		System.out.println();
-		/*                          */
-	   // writing what we got into file given in filename //
+	   boolean firstTime = true;
+	   boolean finished = false;
+	   byte[] expData = {0, 3, 0, 1};
+	   boolean receivedIt;
+			   
 	   try {
 		CreateOutStream();
 	} catch (FileNotFoundException e) {
@@ -220,44 +206,78 @@ public class Client {
 	} catch (IOException e) {
 		e.printStackTrace();
 	}
-	   try {
-		boolean finished = false;
+	   
+	   
+	   
+   try {
+	   while(!finished){
+		   receivedIt = false;
+		if(firstTime){
+			for(int i = 1; i<=5; i++){
+			   try{
+				   sendReceiveSocket.send(constructRRQ(new byte[516]));
+			   }catch(IOException e){
+				   e.printStackTrace();
+				   System.exit(1);
+			   }
+				   
+				try{
+					/* waiting for first Data */
+					System.out.println("Waiting for Data for the "+ i + " time.");
+					sendReceiveSocket.setSoTimeout(1000);
+					sendReceiveSocket.receive(receivePacket);
+					// we received it in time, validate it.
+					if(verify(receivePacket, expData)){
+						receivedIt = true;
+						System.arraycopy(receivePacket.getData(), 0, expData, 0, expData.length); // saving the data block number received.
+						updateBlockNum(expData);
+						System.arraycopy(receivePacket.getData(), 0, data, 0, receivePacket.getLength()); // ensures that the data received is in data[].
+						break;
+					}
+					
+					
+				}catch(SocketTimeoutException e){
+					System.out.println("Waiting for Data" + i + "  Timedout ( " + (5-i) +" ) tries left");
+				}
 
-		while(!finished){
-			   // do transfer. and also send and receive till we finish.
+				
+			} // end waiting for ack
+			if(!receivedIt){
+				// we finished looping and we didnt receive a valid response therefore we give up.
+				System.out.println("Client: Did not receive Ack Packet.. Client Shutting Down..");
+				System.exit(1);
+			}
+			firstTime = false;
+			// we write the data received
 			out.write(receivePacket.getData(), 4, receivePacket.getLength()-4);
+		   /* printing what we received */
 			System.out.println("Client: Data received:");
+			System.out.println("To host: " + receivePacket.getAddress());
+			System.out.println("Destination host port: " + receivePacket.getPort());
+			int len = receivePacket.getLength();
+			System.out.println("Length: " + len);
 			System.out.println("Containing: ");
 			for (int j=0;j<receivePacket.getLength();j++) {
 				 System.out.print(receivePacket.getData()[j] + " ");
 			}
 			System.out.println();
-			// check if we have to loop again. or we reached our end of transfer.
-			// checks if the receivedPacket length is less than the (data sent + the op code 4 bytes = 516)
-			if(receivePacket.getLength() < 516){
-				// prepare to stop writing. and send the last ACK.
-				
-				out.close();
-				
-				finished = true;
+			/*                          */
+			
+		}else{
 				try{
-					System.arraycopy(data, 2, ack, 2, 2);
-					sendReceiveSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(),
-					   								sendPort));
+				System.arraycopy(data, 2, ack, 2, 2);
+				sendReceiveSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(),
+												sendPort));
 				}catch(IOException e){
 					e.printStackTrace();
 					System.exit(1);
 				}
-			}else{ // else we are still have to do more transfers.
-				
-				try{
-					System.arraycopy(data, 2, ack, 2, 2);
-					sendReceiveSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(),
-					   								sendPort));
-				}catch(IOException e){
-					e.printStackTrace();
-					System.exit(1);
+				System.out.println("Client: ACK sent:");
+				System.out.println("Client: Containing:");
+				for (int j=0;j<receivePacket.getLength();j++) {
+				   System.out.print(receivePacket.getData()[j] + " ");
 				}
+				System.out.println();
 				// after sending the ACK, we're expecting DATA.
 				try{
 					
@@ -267,11 +287,35 @@ public class Client {
 					System.exit(1);
 				}
 				// after receiving the new data, we should update the write array. with the new one.
-
+			   /* printing what we received */
+				System.out.println("Client: Data received:");
+				System.out.println("To host: " + receivePacket.getAddress());
+				System.out.println("Destination host port: " + receivePacket.getPort());
+				int len = receivePacket.getLength();
+				System.out.println("Length: " + len);
+				System.out.println("Containing: ");
+				for (int j=0;j<receivePacket.getLength();j++) {
+					 System.out.print(receivePacket.getData()[j] + " ");
+				}
+				System.out.println();
+				/*                          */
+		}
+		if(receivePacket.getLength() < 516){
+			// prepare to stop writing. and send the last ACK.
+			out.close();
+			finished = true;
+			try{
+				System.arraycopy(data, 2, ack, 2, 2);
+				sendReceiveSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(),
+												sendPort));
+			}catch(IOException e){
+				e.printStackTrace();
+				System.exit(1);
 			}
-
-	    }// end while
-		return true; // we finished our RRQ transfer.
+			return true;
+		
+		}
+	}
 	} catch (IOException e) {
 		e.printStackTrace();
 	}
@@ -296,18 +340,12 @@ public class Client {
 	   byte[] data = new byte[516];
 	   byte[] ack = {0,4,0,0};
 	   data[0] = 0; data[1] = 3;
-	   byte[] oldACK = ack;
+	   byte[] expACK = ack;
 	   boolean receivedIt = false;
-	   
-	   
-	   
-	   
+
 	   // prepareing the receive packet to receive the acknowledge.
 	   receivePacket = new DatagramPacket(ack, ack.length);
-	   
-	   
-	   
-	   
+
 	   //-----------------sending a write Request-----------------// 
 		for(int i = 1; i<=5; i++){
 			   try{
@@ -323,9 +361,10 @@ public class Client {
 				sendReceiveSocket.setSoTimeout(1000);
 				sendReceiveSocket.receive(receivePacket);
 				// we received it in time, validate it.
-				if(!verifyACK(receivePacket, oldACK)){
+				if(verify(receivePacket, expACK)){
 					receivedIt = true;
-					oldACK = receivePacket.getData(); // saving the ack received.
+					expACK = receivePacket.getData(); // saving the ack received.
+					updateBlockNum( expACK);
 					break;
 				}
 				
@@ -395,9 +434,10 @@ public class Client {
 						sendReceiveSocket.setSoTimeout(1000);
 						sendReceiveSocket.receive(receivePacket);
 						// we received it in time, validate it.
-						if(!verifyACK(receivePacket, ack)){
+						if(verify(receivePacket, expACK)){
 							receivedIt = true;
-							oldACK = receivePacket.getData(); // saving the ack received.
+							expACK = receivePacket.getData(); // saving the ack received.
+							updateBlockNum(expACK);
 							break;
 						}
 						
