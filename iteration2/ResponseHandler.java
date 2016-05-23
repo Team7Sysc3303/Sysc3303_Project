@@ -66,11 +66,14 @@ public class ResponseHandler implements Runnable {
 			   
 			   return false; // duplicated.
 		   }
+		   }else if(p[1] == 1 || p[1] == 2){
+			   return false;
 		   }
 		   
 		   // the received ACK is bigger than the expected one.
+	   		System.out.println();
 		   System.out.println("ACK received cannot be explained by delayed/duplicate errors.");
-		   System.out.println("Client: Shutting Down...");
+		   System.out.println("Server: Shutting Down...");
 		   System.exit(1);
 		   return false;
 	   }
@@ -151,8 +154,6 @@ public class ResponseHandler implements Runnable {
 						// verify if we received the expected block number or not.
 						if(verify(receivePacket.getData(), expACK)){
 							receivedIt = true;
-							expACK = receivePacket.getData();
-							updateBlockNum(data);
 							// getting the expected block number to wait for the new ACK to be compared to.
 							updateBlockNum(expACK);
 							break;
@@ -190,10 +191,13 @@ public class ResponseHandler implements Runnable {
 					}
 					System.out.println();
 					//------------------------------//
+					
+					
+					
 				}else{
 					return true;
 				}
-			
+			updateBlockNum(data);
 		}// end while
 		
 		return false; // something weird happened.
@@ -222,7 +226,7 @@ public class ResponseHandler implements Runnable {
 			/**
 			 * Forming and Sending ACK# 0 --- #n
 			 */
-			 
+			while(true){
 			try{
 				// receivePacket going to send "Ack's"
 				receivePacket.setData(ack);
@@ -242,6 +246,7 @@ public class ResponseHandler implements Runnable {
 			for (int j=0;j<len;j++) {
 				 System.out.print(receivePacket.getData()[j] + " ");
 			}
+			System.out.println();
 			//----------------------------------//
 			
 			
@@ -253,10 +258,15 @@ public class ResponseHandler implements Runnable {
 				receivePacket.setData(data);
 				receivePacket.setLength(data.length);
 				sendSocket.receive(receivePacket);
+				if(verify(receivePacket.getData(), expData)){
+					break;
+				}
 			}catch(IOException e){
 				e.printStackTrace();
 				System.exit(1);
 			}
+		}
+			
 			/*      Print what we received      */
 			System.out.println("Server: Received Data packet:");
 			System.out.println("To host: " + receivePacket.getAddress());
@@ -267,21 +277,26 @@ public class ResponseHandler implements Runnable {
 			for (int j=0;j<len;j++) {
 				 System.out.print(receivePacket.getData()[j] + " ");
 			}
+			System.out.println();
 			/*----------------------------------*/
 			
-
+			if(receivePacket.getData()[1] == 3){
 			// get the data block number and transfer it to ack
-			System.arraycopy(receivePacket.getData(), 2, ack, 2, ack.length);
-
-			if(verify(receivePacket.getData(), expData)){
+				ack[2] = receivePacket.getData()[2];
+				ack[3] = receivePacket.getData()[3];
+			//-------------------------------------------------
+			
+			
 				try {
 					out.write(receivePacket.getData(), 4, receivePacket.getLength()-4);
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
+				
 				// get the block number.
 				System.arraycopy(receivePacket.getData(), 0, expData, 0, expData.length);
+				updateBlockNum(expData);
 				/**
 				 * Check if we need to end this transfer connection
 				 */
@@ -318,6 +333,7 @@ public class ResponseHandler implements Runnable {
 					}// end try catch
 					return true;
 				}
+			
 				
 			}
 			
