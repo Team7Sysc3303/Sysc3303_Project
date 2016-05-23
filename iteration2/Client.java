@@ -198,7 +198,9 @@ public class Client {
 	   boolean finished = false;
 	   byte[] expData = {0, 3, 0, 1};
 	   boolean receivedIt;
-			   
+	   // that fixed the problem.
+	   	receivePacket = new DatagramPacket(data, data.length);
+		// --------------- //
 	   try {
 		CreateOutStream();
 	} catch (FileNotFoundException e) {
@@ -262,29 +264,37 @@ public class Client {
 			}
 			System.out.println();
 			/*                          */
-			
+			sendReceiveSocket.setSoTimeout(0);
 		}else{
-				try{
-				System.arraycopy(data, 2, ack, 2, 2);
-				sendReceiveSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(),
-												sendPort));
-				}catch(IOException e){
-					e.printStackTrace();
-					System.exit(1);
-				}
-				System.out.println("Client: ACK sent:");
-				System.out.println("Client: Containing:");
-				for (int j=0;j<receivePacket.getLength();j++) {
-				   System.out.print(receivePacket.getData()[j] + " ");
-				}
-				System.out.println();
-				// after sending the ACK, we're expecting DATA.
-				try{
-					
-					 sendReceiveSocket.receive(receivePacket);
-				}catch(IOException e){
-					e.printStackTrace();
-					System.exit(1);
+				while(true){
+					try{
+					System.arraycopy(data, 2, ack, 2, 2);
+					System.out.println("Client: Sending ACK..");
+					sendReceiveSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getLocalHost(),
+													sendPort));
+					}catch(IOException e){
+						e.printStackTrace();
+						System.exit(1);
+					}
+					System.out.println("Client: ACK sent:");
+					System.out.println("Client: Containing:");
+					for (int j=0;j<ack.length;j++) {
+					   System.out.print(ack[j] + " ");
+					}
+					System.out.println();
+					// after sending the ACK, we're expecting DATA.
+					try{
+						 sendReceiveSocket.receive(receivePacket);
+						if(verify(receivePacket, expData)){
+							System.arraycopy(receivePacket.getData(), 0, expData, 0, expData.length); // saving the data block number received.
+							updateBlockNum(expData);
+							System.arraycopy(receivePacket.getData(), 0, data, 0, receivePacket.getLength()); // ensures that the data received is in data[].
+							break;
+						}
+					}catch(IOException e){
+						e.printStackTrace();
+						System.exit(1);
+					}
 				}
 				// after receiving the new data, we should update the write array. with the new one.
 			   /* printing what we received */
@@ -299,6 +309,10 @@ public class Client {
 				}
 				System.out.println();
 				/*                          */
+				
+				// we write the data received
+				out.write(receivePacket.getData(), 4, receivePacket.getLength()-4);
+				
 		}
 		if(receivePacket.getLength() < 516){
 			// prepare to stop writing. and send the last ACK.
@@ -338,9 +352,10 @@ public class Client {
     */
    public boolean writeRequestHandler() throws IOException{
 	   byte[] data = new byte[516];
-	   byte[] ack = {0,4,0,0};
+	   byte[] ack = new byte[4];
 	   data[0] = 0; data[1] = 3;
-	   byte[] expACK = ack;
+	   data[2] = 0; data[3] = 1;
+	   byte[] expACK = {0,4,0,0};
 	   boolean receivedIt = false;
 
 	   // prepareing the receive packet to receive the acknowledge.
@@ -363,8 +378,7 @@ public class Client {
 				// we received it in time, validate it.
 				if(verify(receivePacket, expACK)){
 					receivedIt = true;
-					expACK = receivePacket.getData(); // saving the ack received.
-					updateBlockNum( expACK);
+					updateBlockNum(expACK);
 					break;
 				}
 				
@@ -381,7 +395,19 @@ public class Client {
 			System.exit(1);
 		}
 	   //---------------------------------------------------------//
-	   
+		
+		   /* printing what we received */
+			System.out.println("Client: ACK received:");
+			System.out.println("To host: " + receivePacket.getAddress());
+			System.out.println("Destination host port: " + receivePacket.getPort());
+			int len = receivePacket.getLength();
+			System.out.println("Length: " + len);
+			System.out.println("Containing: ");
+			for (int j=0;j<receivePacket.getLength();j++) {
+				 System.out.print(receivePacket.getData()[j] + " ");
+			}
+			System.out.println();
+		/*                          */
 	   
 	   
 	   
@@ -405,15 +431,12 @@ public class Client {
 			// condition to check if we aren't done yet from reading.
 			// read() returns -1 if we have no more data to be read from the file.
 			if((n=in.read(read)) != -1 ){
-
-				// we need to update the data block # corresponding to the ACK block #;
-				updateACK(receivePacket.getData()[2], receivePacket.getData()[3], data);
 				// now read has the data, data has the first 4 bytes ready. therefore;
 				System.arraycopy(read, 0, data, 4, read.length);
 				// data is read to be sent.
-				
+				System.out.println("----------- N = " + n);
 				// sending the data packet block#n//
-				for(int i = 1; i<=5; i++){
+				for(int i = 1; i<=10; i++){
 					try{
 						/* Printing what we've sent */
 						System.out.println("Client: Sending Data Packet, for the "+ i + " time.");
@@ -436,7 +459,7 @@ public class Client {
 						// we received it in time, validate it.
 						if(verify(receivePacket, expACK)){
 							receivedIt = true;
-							expACK = receivePacket.getData(); // saving the ack received.
+							// we need to update the data block # corresponding to the ACK block #;
 							updateBlockNum(expACK);
 							break;
 						}
@@ -454,7 +477,14 @@ public class Client {
 					System.exit(1);
 				}
 			   //---------------------------------------------------------//
-
+				/* Printing what we've sent */
+				System.out.println("Client: ACK Packet received");
+				System.out.println("Containing: ");
+				for (int j=0;j<4;j++) {
+					 System.out.print(receivePacket.getData()[j] + " ");
+				}
+				
+				updateACK(receivePacket.getData()[2], receivePacket.getData()[3], data);
 				
 			}else{ 
 				
