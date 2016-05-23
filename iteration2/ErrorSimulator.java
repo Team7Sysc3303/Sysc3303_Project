@@ -1,3 +1,5 @@
+package iteration1;
+
 import java.io.IOException;
 import java.net.*;
 import java.util.Scanner;
@@ -142,14 +144,6 @@ public class ErrorSim{
 			System.err.println("SocketException: " + se.getMessage());
 		} // end catch
 
-		// initialize the DatagramSocket sendSocket
-		try {
-			clientSocket = new DatagramSocket();
-		} // end try 
-		catch (SocketException se) {
-			System.err.println("SocketException: " + se.getMessage());
-		} // end catch
-
 		System.out.println("ConnectionManagerESim: Thread started to service request!");
 		try {
 			receiveClientPacket = new DatagramPacket(clientData, clientLength, InetAddress.getLocalHost(), clientPort);
@@ -200,11 +194,12 @@ public class ErrorSim{
 		}//end if
 		//if this is the initial iteration, send the initial request received from the client, to the Server
 		serverSend();
-		if (errorReceived || (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3]))//change	
-			return true; //change
-		if (done){ 
+		//doneTransfer();
+		if (errorReceived || (lastPacketRead == true && trueLastPacket[0] == receiveServerPacket.getData()[2] && trueLastPacket[1] == receiveServerPacket.getData()[3]))//change
 			return true;
-		}
+		//if (done){ 
+			//return true;
+		//}
 		// Check if this is not the first iteration and the request type is WRQ
 		if (Write == true && !firstPacket) {
 			System.out.println("Checking if this packet size...");
@@ -227,9 +222,10 @@ public class ErrorSim{
 		false, which will enable the program return to the begining of this method, so that the final ACK can be sent back to the server, after which we exit.*/
 		if (Read == true) {
 			verifyPacketSize();
+			return false;
 		} // end if
-
 		return false;
+
 	}
 
 
