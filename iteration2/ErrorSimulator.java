@@ -200,7 +200,8 @@ public class ErrorSim{
 		}//end if
 		//if this is the initial iteration, send the initial request received from the client, to the Server
 		serverSend();
-		doneTransfer();
+		if (errorReceived || (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3]))//change	
+			return true; //change
 		if (done){ 
 			return true;
 		}
