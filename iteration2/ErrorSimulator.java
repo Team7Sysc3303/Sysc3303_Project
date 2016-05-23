@@ -194,12 +194,10 @@ public class ErrorSim{
 		}//end if
 		//if this is the initial iteration, send the initial request received from the client, to the Server
 		serverSend();
-		//doneTransfer();
-		if (errorReceived || (lastPacketRead == true && trueLastPacket[0] == receiveServerPacket.getData()[2] && trueLastPacket[1] == receiveServerPacket.getData()[3]))//change
+		doneTransfer();
+		if (done){ 
 			return true;
-		//if (done){ 
-			//return true;
-		//}
+		}
 		// Check if this is not the first iteration and the request type is WRQ
 		if (Write == true && !firstPacket) {
 			System.out.println("Checking if this packet size...");
@@ -844,17 +842,16 @@ private void printInformation(DatagramPacket p) {
 
 	public void verifyReadWrite (DatagramPacket p){
 		System.out.println ("Verifying transfer type");
-		if(p.getData()[0]!=0){
+		if(p.getData()[0] != (byte) 0){
 			System.exit(1);
-			if(p.getData()[0]== (byte) 0 && p.getData()[1]==(byte) 1){
-				System.out.println ("Transfer type is a RRQ");
-				Read = true; 
-			}
-			else if(p.getData()[0]== (byte) 0 && p.getData()[1]==(byte) 2){
-				System.out.println ("Transfer type is a WRQ"); 
-				Write = true; 
-			}
 		}
+		if(p.getData()[1] == (byte) 1 ){
+			Read = true;
+		}
+		if(p.getData()[1] == (byte) 2 ){
+			Write = true;
+		}
+		
 	}
 
 
