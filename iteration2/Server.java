@@ -41,6 +41,7 @@ public class Server implements Runnable {
 		   System.exit(1);
 	   }
    }
+   
  /*public void checkForError(byte[] data)
  {
 	 //byte [] data;
@@ -197,7 +198,7 @@ public class Server implements Runnable {
 	         counter ++;
 	        // responseThread.start();
 	         
-	         
+	         /*
 	         try {
 				responseThread.join();
 			} catch (InterruptedException e) {
@@ -205,7 +206,7 @@ public class Server implements Runnable {
 				System.out.println("HERE!!");
 				e.printStackTrace();
 			}
-	     
+	     */
 	         
 	         
 	         
