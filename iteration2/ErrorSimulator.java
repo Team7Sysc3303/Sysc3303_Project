@@ -6,33 +6,23 @@ import java.util.Scanner;
 
 public class ErrorSim{
 	public static final int DATA_SIZE = 516;
-
-	private boolean done = false;
-	/**
-	 * Mode the user wants to enter
-	 * 0 Normal Mode
-	 * 1 Lost Mode
-	 * 2 Delayed Mode
-	 * 3 Duplicate Mode
-	 */
+	private boolean done = false; // Variable to keep track of whether the file transfer is done
+	// Mode of operation entered by the user. 0 for Normal mode, 1 for lost mode, 2 for delayed mode, 3 for duplicate mode
 	private static int Selection;
-	public static final long TIMEOUT = 3000;	//int value in miliseconds 
-
 	private int serverPort = 69; // the server port will be initiated to 69 and will change according to the thread needed 
 	private DatagramSocket serverSocket, clientSocket; // socket deceleration for all three required sockets 
-	private DatagramPacket sendClientPacket, receiveClientPacket, receiveServerPacket, sendServerPacket; // packet deceleration for all packets being sent and received for both client and server
-	private byte clientData[];
-	private int clientPort;
-	private int clientLength;
-	private int serverLength;
-	//private int mode;	// will have the value of the current error simulation mode 
-	private int delay; // will store the amount of delay if we are running in delayed mode
-	private boolean Read = false;
-	private boolean Write = false;
-	private boolean lastPacketWrite = false;
-	private boolean lastPacketRead = false;
+	private DatagramPacket sendClientPacket, receiveClientPacket, sendServerPacket , receiveServerPacket; // packet deceleration for all packets being sent and received for both client and server
+	private byte clientData[]; // Stores the data received from the client
+	private int clientPort; //Stores the port number used to receive the client's request
+	private int clientLength; //Stores the length of the dat received from the client
+	private int serverLength; // stores the length of the data received from the server
+	private int delay; // Stores the delay specified by the user
+	private boolean Read = false; // This variable is true if and only if data is being read from the server
+	private boolean Write = false; // This variable is true if and only if data is being written to the server
+	private boolean lastPacketWrite = false; // This variable is true if and only if the error simulator receives the last data packet to be written to the server
+	private boolean lastPacketRead = false; // This variable is true if and only if the error simulator receives the last packet data to be read from the server
 	private boolean firstPacket = true;
-	private boolean end = false;
+	private boolean end = false; // This variable is true if and only if the full file transfer process between the client and the server has been completed
 	private boolean errorReceived = false;
 	private boolean errorOnServer = false;
 	// stores which packet type we are altering -- default is 0 if we are running normally
