@@ -7,7 +7,7 @@ import java.util.Scanner;
 public class ErrorSim{
 	public static final int DATA_SIZE = 516;
 	private boolean done = false; // Variable to keep track of whether the file transfer is done
-	// Mode of operation entered by the user. 0 for Normal mode, 1 for lost mode, 2 for delayed mode, 3 for duplicate mode
+	// Mode of operation entered by the user. 0 for Normal mode, 1 for lost mode, 2 for delayed mode, 3 for duplicate mode, 4 to shutdown the error simulator
 	private static int Selection;
 	private int serverPort = 69; // the server port will be initiated to 69 and will change according to the thread needed 
 	private DatagramSocket serverSocket, clientSocket; // socket deceleration for all three required sockets 
@@ -22,29 +22,27 @@ public class ErrorSim{
 	private boolean lastPacketWrite = false; // This variable is true if and only if the error simulator receives the last data packet to be written to the server
 	private boolean lastPacketRead = false; // This variable is true if and only if the error simulator receives the last packet data to be read from the server
 	private boolean firstPacket = true;
-	private boolean end = false; // This variable is true if and only if the full file transfer process between the client and the server has been completed
+	private boolean end = false; // This variable stores the return values of the various modes of operation and is true if and only if the full file transfer process between the client and the server has been completed
 	private boolean errorReceived = false;
 	private boolean errorOnServer = false;
-	// stores which packet type we are altering -- default is 0 if we are running normally
-	private int packetType = 0;
-	// stores which packet number we are altering -- default is 0 if we are running normally
-	private int packetNumber = 0;
-	byte clientReply[] = new byte[DATA_SIZE]; // this will store the reply from the client
-	byte serverReply[] = new byte[DATA_SIZE]; // this will store the reply from the server
-	byte serverData[] = new byte[DATA_SIZE]; // this will store the response from the server
-	byte trueLastPacket[] = new byte[2]; // will store the block number of the truly last packet to verify if we have received it or not
+	private int packetType = 0; // Stores the type of packet to be lost, duplicated or delayed, as specified by the user
+	private int packetNumber = 0; // Stores the packet number to be lost, duplicated or delayed, as specified by the user
+	byte clientReply[] = new byte[DATA_SIZE]; // Store the client's reply
+	byte serverReply[] = new byte[DATA_SIZE]; // // Store the server's reply
+	byte serverData[] = new byte[DATA_SIZE]; // Stores the data received from the server
+	byte trueLastPacket[] = new byte[2]; // Stores the correct last block number of a data transfer to make sure that the file transfer process has been fully successful
 	
 	public ErrorSim() {
 		
 		if (Selection == 0) {
-			System.out.println("ErrorSim will be running in Normal mode");
+			System.out.println("Operating Error Simulator in Normal Mode, as specified by the user");
 		}
 
 		// LOST MODE 
 		else if (Selection == 1) {
 			@SuppressWarnings("resource")
 			Scanner input = new Scanner(System.in);
-			System.out.println("User specified Lost Packet Mode");
+			System.out.println("Operating Error Simulator in Lost Mode, as specified by the user");
 			System.out.println("Enter packet type to be lost: 1 for RRQ; 2 for WRQ; 3 for DATA; 4 for ACK");
 			packetType = input.nextInt();
 
@@ -64,7 +62,7 @@ public class ErrorSim{
 		else if (Selection == 2) {
 			@SuppressWarnings("resource")
 			Scanner input = new Scanner(System.in);
-			System.out.println("User specified Delayed Packet Mode");
+			System.out.println("Operating Error Simulator in Delayed Mode, as specified by the user");
 			System.out.println("Enter packet type to be delayed: 1 for RRQ; 2 for WRQ; 3 for DATA; 4 for ACK");
 			packetType = input.nextInt();
 			// If packet type to be delayed is DATA or ACK, get the speific packet number
@@ -85,7 +83,7 @@ public class ErrorSim{
 		else if (Selection == 3) {
 			@SuppressWarnings("resource")
 			Scanner input = new Scanner(System.in);
-			System.out.println("User specified Duplicate Packet Mode");
+			System.out.println("Operating Error Simulator in Duplicate Mode, as specified by the user");
 			System.out.println("Enter packet type to be delayed: 1 for RRQ; 2 for WRQ; 3 for DATA; 4 for ACK");
 			packetType = input.nextInt();
 
@@ -105,30 +103,30 @@ public class ErrorSim{
 		}
 
 		
-		clientData = new byte[DATA_SIZE];
+		clientData = new byte[DATA_SIZE]; // Create a new array of 516 bytes for client data storage
 		try{
-			clientSocket = new DatagramSocket(23);
+			clientSocket = new DatagramSocket(23); // Create a new Datagram socket for receiving data from the client. Here we bind the socket to port 23, which is the well-known port for the error simulator
 		} catch (SocketException e){
 			System.err.println("SocketException: " + e.getMessage());
 		}
-		receiveClientPacket = new DatagramPacket(clientData, clientData.length);
+		receiveClientPacket = new DatagramPacket(clientData, clientData.length); // Create a new Datagram packet, which stores the client's data.
 		
-		System.out.println("Waiting for client request...");
+		System.out.println("Waiting for request from the client...");
 
-		try { // recieve client request
+		try { // Try recieving client request if available. This blocks until a packet is received from the client
 			clientSocket.receive(receiveClientPacket);
 		} // end try 
 		catch (IOException ie) {
 			System.err.println("IOException error: " + ie.getMessage());
 		} // end catch
 		System.out.println("Recieved client's request");
-		printInformation(receiveClientPacket);
-		verifyReadWrite(receiveClientPacket);
-		clientPort = receiveClientPacket.getPort();
-		clientLength = receiveClientPacket.getLength();
+		printInformation(receiveClientPacket); // Print the information of the request received from the client
+		verifyReadWrite(receiveClientPacket); // verify whether the request is a read or write or an error packet
+		clientPort = receiveClientPacket.getPort(); // store the port number used by the client to send the request
+		clientLength = receiveClientPacket.getLength(); // store the length of the packet received from the client
 		
 		try {
-			serverSocket = new DatagramSocket();
+			serverSocket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
 		} // end try 
 		catch (SocketException se) {
 			System.err.println("SocketException: " + se.getMessage());
@@ -166,7 +164,7 @@ public class ErrorSim{
 		}//end while
 
 		// If we are done with the data transfer, close sockets and return
-		System.out.println("ConnectionManagerESim: closing its sockets and shutting down the thread");
+		System.out.println("File transfer done. I am closing my client and server sockets");
 		serverSocket.close();
 		clientSocket.close();
 	} // end method
@@ -197,8 +195,6 @@ public class ErrorSim{
 				lastPacketWrite = true;	
 		} // end if
 
-		//*********************************************************************************
-
 		// Receive ACK or data from the server and send to the client. 
 		serverReceive();
 		clientSend();
@@ -223,34 +219,158 @@ public class ErrorSim{
 
 	private boolean lostMode()
 	{
-		if (packetType == 1 || packetType == 2) 
-		{ // If RRQ or WRQ, we just dont send anything
-			System.out.println("First Packet (RRQ or WRQ) wass lost");
-			clientReceive();
-			firstPacket = true;
-			Selection = 0;
-			return true;
-			
-		}
-		else if (packetType == 3 || packetType == 4)
-		{
-			if (errorOnServer == true)
-			{
-				if (packetType == 3 || packetType == 4)
-				{
-					System.out.println("Data or Ack didn't reach Server");
-					System.out.println("receive data from Client again");
-					clientReceive();
-				}
-			}
-			else 
-			{
-				System.out.println("Data Or Ack didn't reach Client ");
-				System.out.println("receive data from Server again");
+		System.out.println("Starting Lost Mode...");
+        if (Read == true && packetType == 1){ // this is a read request and the packet to be lost is an RRQ
+			System.out.println("I'm sorry but I think I just lost an RRQ... Serves you right :p");
+			printInformation(receiveClientPacket);
+			return true; 
+		}// end 
+        
+        if (Write == true && packetType == 2){ // this is a read request and the packet to be lost is an RRQ
+			System.out.println("I'm sorry but I think I just lost a WRQ... Serves you right :p");
+			printInformation(receiveClientPacket);
+			return true; 
+		}// end 
+        
+        else if (Read == true && packetType == 4){ // This is a read request and the packet to be lost is an ACK
+            if (!lastPacketRead) {
+                if (!firstPacket) {
+                    // If this is not the first packet, receive ACK from the client client
+                    clientReceive();
+                }// end if
+                firstPacket = false; // this is no longer the first packet
+                // check if this is the ACK packet to be lost
+                if (foundPacket(receiveClientPacket)) { // if this is the packet to be ACK to be lost, do not send it to the server. instead, recieve the previous data from the server and send to the client again
+                    System.out.println("I just got the ACK I want and I am not sending it to the server.. ***Evil Laugh***");
+                    printInformation(receiveClientPacket);
+                    //Reset to normal mode of operation
+                    mode = 0;
+                }//end if
+                else { // If this is not the ACK packet to be lost, send it to the server
+                    serverSend();
+                }//end else
+                //receive next data packet from the server
+                serverReceive();
+                // Send the server's data packet to the client
+                clientSend();
+                // Check if that was the last data to be transfered
+                if(sendClientPacket.getLength() < DATA_SIZE){
+                    lastPacketRead = true;
+                }
+                return false;					
+            } // end if
+            else if (lastPacketRead) { // If the last data packet had just been read from the server
+                // receive from client
+                clientReceive();
+                // check if this is the ACK packet to be lost
+                if (foundPacket(receiveClientPacket)) { // if this is the last ACK and it is the packet to be ACK to be lost, do not send it to the server. instead, return true and exit
+                    System.out.println("I just got the ACK I want and I am not sending it to the server.. ***Evil Laugh***");
+                    printInformation(receiveClientPacket);
+                    return true;
+                }//end if
+                else {
+                    serverSend(); // if this is the last ACK and it is not the packet to be ACK to be lost, send it to the server and return true and exit
+                    return true; 
+                }
+            }//end else if
+        }// end else if
+        
+        else if (Read == true && packetType == 3){ // This is a read request and the packet to be lost is DATA
+            if (!firstPacket) {
+			    clientReceive(); //If theis is not the first packet, receive ACK from the client
+			}// end if
+			firstPacket = false; // this is no longer the first packet so set this variable to false
+			serverSend(); // Send the client's response to the server
+			serverReceive(); // Receive new data from the server
+			// check if this is the DATA packet to be lost
+			if (foundPacket(receiveServerPacket)) { // If this is the DATA packet to be lost, do not send it to the server. Instead, wait for server to resend data
+				System.out.println("I just received the DATA you want and...I AM NOT SENDING IT! :p");
+			    printInformation(receiveServerPacket);
+			    // Reset to normal mode of operation
+			    mode = 0;
+			    serverReceive(); // wait on server to resend DATA
+			}//end if
+               
+			//send the data to the client
+			clientSend();
+			// Check if that was the last data to be transfered
+			if(sendClientPacket.getLength() < DATA_SIZE){
+				lastPacketRead = true;
+            }
+            return false;					
+		} // end else if
+        else if (Write == true && packetType == 4){ // This is a write request and the packet to be lost is an ACK
+            if (firstPacket) { // if this is the first packet
+                serverSend();
 				serverReceive();
-			}
-		} return false;
+                // Check if this is the ACK packet to be lost
+				if(foundPacket(receiveServerPacket)) { // If the ACK to be lost is the first, which gives the client permission to write to the server, do not send it and exit because the client will timeout if it does not have permission to write to the server.
+					System.out.println("You do not have permission to write to the server because I just lost your first ACK...Sorry");
+					printInformation(receiveServerPacket);
+				    return true;
+			    }// end if
+			    else { // If the ACK to be lost is not the first, send it to the client and keep searching
+				    firstPacket = false; // this is no longer the first packet so set this variable to false
+				    clientSend();
+				    return false;
+			    }//end else	
+		    }// end if        
+            clientReceive(); // Receive DATA from the client
+		    // Check if that was the last data to be transfered
+		    if (receiveClientPacket.getLength() < DATA_SIZE) {
+			    lastPacketWrite = true;
+		    }
+		    serverSend(); // Send the client's data to the server
+		    serverReceive(); // Recieve an ACK from the server
+		    // Check if this is the ACK packet to be lost
+		    if (foundPacket(receiveServerPacket)) { // this is the packet we want to lose
+			    System.out.println("I just lost the 'TOP SECRET' ACK you wanted me to lose... you happy?");
+			    printInformation(receiveServerPacket);
+		        // Check if that was the last ACK
+		        if (lastPacketWrite) { // this is the last ACK packet that we are sending back to the client
+			        return true;
+		        }
+		        else {
+		            //Reset to normal mode of operation
+		            mode = 0;
+			        return false;
+		        }
+	        }//end if
+		    //send server response to the client
+		    clientSend();
+		    // Check if that was the last ACK
+		    if (lastPacketWrite){
+			    return true;
+            }
+		    else{
+			    return false;
+		    }// end else if
+        }
+         else if (Write == true && packetType == 3){ // This is a write request and the packet to be lost is an DATA
+            if (!firstPacket) {
+				clientReceive(); // If this is not the first packet, receive new data from the client
+			}// end if
+			firstPacket = false; // this is no longer the first packet so set this variable to false
+			// Check if this is the ACK packet to be lost
+			if (foundPacket(receiveClientPacket)) { // this is the packet we want to lose
+				System.out.println("Em... Well... I dont know what just happened but I just lost your DATA packet.");
+				printInformation(receiveClientPacket);
+				// Reset to normal mode of operation
+				mode = 0;
+                return false;
+			}//end if
+            // Send the DATA packet to the server
+			serverSend();
+            if (sendServerPacket.getLength() < DATA_SIZE){
+					lastPacketWrite = true; // Check if that was the last DATA packet to be written to the server
+            }
+			serverReceive(); // Receive response from the server
+			clientSend(); // Send server response to the client
+            return false;					
+		} // end else if
+		return false;
 	}
+            
 	private boolean duplicateMode()
 	{
 		System.out.println("Starting Duplication...");
@@ -270,10 +390,10 @@ public class ErrorSim{
 
 			clientSend(); // send server response to the client
 
-			// Reset mode
+			// Reset to Normal mode of operation
 			Selection = 0;
 
-			firstPacket = false;
+			firstPacket = false; // first packet has been transfered to the client so set this variable to false and return
 			return false;
 		}// end if
 
@@ -740,78 +860,6 @@ public class ErrorSim{
 		return false;
 	}// end method
 
-
-	/*public void getUserInput() {
-		if (Selection == 0) {
-			System.out.println("ErrorSim will be running in Normal mode");
-		}
-
-		// LOST MODE 
-		else if (Selection == 1) {
-			@SuppressWarnings("resource")
-			Scanner input = new Scanner(System.in);
-			System.out.println("User specified Lost Packet Mode");
-			System.out.println("Enter packet type to be lost: 1 for RRQ; 2 for WRQ; 3 for DATA; 4 for ACK");
-			packetType = input.nextInt();
-
-			// If packet type to be lost is DATA or ACK, get the speific packet number
-			if (packetType == 3 || packetType == 4){
-				System.out.println("Which packet do you want to lose: ");
-				packetNumber = input.nextInt();
-			}
-
-			// If the packet to be lost is a request, we will just lose the first packet
-			else {
-				packetNumber = 1;
-			}
-
-		}
-		// DELAYED MODE
-		else if (Selection == 2) {
-			@SuppressWarnings("resource")
-			Scanner input = new Scanner(System.in);
-			System.out.println("User specified Delayed Packet Mode");
-			System.out.println("Enter packet type to be delayed: 1 for RRQ; 2 for WRQ; 3 for DATA; 4 for ACK");
-			packetType = input.nextInt();
-			// If packet type to be delayed is DATA or ACK, get the speific packet number
-			if (packetType == 3 || packetType == 4){
-				System.out.println("Which packet do you want to delay: ");
-				packetNumber = input.nextInt();
-			}
-
-			// If the packet to be delayed is a request, we will just delay the first packet
-			else {
-				packetNumber = 1;
-			}
-			System.out.println("Specify the delay in milliseconds: ");
-			delay = input.nextInt();
-
-		}
-		// DUPLICATE MODE
-		else if (Selection == 3) {
-			@SuppressWarnings("resource")
-			Scanner input = new Scanner(System.in);
-			System.out.println("User specified Duplicate Packet Mode");
-			System.out.println("Enter packet type to be delayed: 1 for RRQ; 2 for WRQ; 3 for DATA; 4 for ACK");
-			packetType = input.nextInt();
-
-			// If packet type to be duplicated is DATA or ACK, get the speific packet number
-			if (packetType == 3 || packetType == 4){
-				System.out.println("Which packet do you want to duplicate: ");
-				packetNumber = input.nextInt();
-			}
-
-			// If the packet to be duplicated is a request, we will just duplicated the first packet
-			else {
-				packetNumber = 1;
-			}
-
-			System.out.println("Enter the delay between duplication in milliseconds: ");
-			delay = input.nextInt();
-		}
-
-		startOperation();
-	}// end while*/
 	
 private void printInformation(DatagramPacket p) {
 		
@@ -857,30 +905,33 @@ private void printInformation(DatagramPacket p) {
 				while (!validEntry) {
 
 					// print out information for the user depending on the mode of run they want to use
-					System.out.println("0 - Normal\n1 - Lose a packet\n2 - Delay a packet\n3 - Duplicate\n9\n");
+					System.out.println("Hello World! Enter the mode operation you would like today. 0 for Normal mode, 1 for lost mode, 2 for delayed mode, 3 for duplicate mode, 4 to shutdown the error simulator");
 					System.out.println("Please enter a mode for the Error Simulator to start in:");
 
 					Selection = in.nextInt();
 					// check if a valid choice has been entered
-					if (Selection == 0 || Selection == 1 || Selection == 2 || Selection == 3) {
+					if (Selection == 0 || Selection == 1 || Selection == 2 || Selection == 3 || Selection ==4) {
 						validEntry = true;
 					}
 					else {
-						System.out.println("Invalid choice entered. Please try again!");
+						System.out.println("It seems like your input was invalid **Better luck next time**. Please feel free try again!");
 						validEntry = false;
 					}
 				} // end while
+                if (Selection == 4){
+                    shutdown = true; // if user input is 4, Shutdown the Error simulator 
+                }
 
 				
 				ErrorSim esim = new ErrorSim();
 
 				esim.startOperation();
-				validEntry = false;
+				validEntry = false; // reset valid entry to false, so user can do another data transfer
 			}// end while	
 
 			// close the Scanner
 			in.close();
-			System.out.println ("ErrorSim: shutting down");
+			System.out.println ("My job is done. I am shutting down...GOODBYE FOREVER **Starts Crying** I...Caa...Can't...Bre...athe...Goo...d...Bye");
 			System.exit(0);
 		} // end method
 	} // end class
