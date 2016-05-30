@@ -85,8 +85,6 @@ public class Client {
 		   
 		   // the received ACK is bigger than the expected one.
 		   System.out.println("Packet received cannot be explained by delayed/duplicate errors.");
-		   System.out.println("Client: Shutting Down...");
-		   System.exit(1);
 		   return false;
 	   }
 	
