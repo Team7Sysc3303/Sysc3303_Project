@@ -3,6 +3,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -43,6 +44,9 @@ public class Server {
 	 *  Shutdown flag to show if shutdown has been requested
 	 */
 	private boolean shutdown;
+	
+	
+	private boolean verbose = true;
 
 	public Server() {
 		try {
@@ -52,7 +56,69 @@ public class Server {
 			e.printStackTrace();
 		}
 	}
+	
+	public static String packetInfo(DatagramPacket packet)
+	{
+		String opCode = "unknown";
+		switch(packet.getData()[1]) {
+		case (1): opCode = "RRQ"; break;
+		case (2): opCode = "WRQ"; break;
+		case (3): opCode = "DATA"; break;
+		case (4): opCode = "ACK"; break;
+		case (5): opCode = "ERROR"; break;
+		}
+		return opCode;
+	}
+	
+	
+	
+	
+	public static void analyzePacket(DatagramPacket packet) {
+		System.out.println("--------------------------------------------");
+		byte[] received = packet.getData();
+		System.out.println("Packet Opcode: " + received[1]);
+		System.out.println("Packet Type: " + packetInfo(packet));
+		System.out.print("Packet Contents: ");
+		for (int i = 0; i < packet.getLength(); i++)  {
+			System.out.print(received[i] + " ");
+		}
+		System.out.println();
+		System.out.println("--------------------------------------------");
+	}
 
+	
+	
+	   public boolean checkTypeError(DatagramPacket p){
+		   switch(p.getData()[3]){
+		   case (byte) 1: case (byte) 2: case (byte) 3: case (byte) 6:
+			   if(verbose){
+			    System.out.println("Client: ERROR packet received (IO error)");
+		   		System.out.println("Client: Terminating the connection.");
+			   }
+		   		return true;
+		   case (byte) 4:
+			   if(verbose){
+			    System.out.println("Client: ERROR packet received (Code 4: Invalid packet)");
+		   		System.out.println("Client: Terminating the connection.");
+			   }
+		   		return true;
+		   case (byte) 5:
+			   if(verbose){
+			    System.out.println("Client: ERROR packet received (Code 5: Unknown Transfer ID)");
+		   		System.out.println("Client: Terminating the connection.");
+			   }
+		   		return true;
+			   
+		   }
+		   if(verbose){
+		   System.out.println("Client: ERROR packet received (Code UNKNOWN)");
+		   System.out.println("Client: ERROR packet ignored");
+		   }
+		   return false;
+	   }
+	   
+	   
+	   
 	   public boolean verifyBlock(byte[] p, byte[] expected){
 	   if(p[0] == expected[0] && p[1] == expected[1]){
 		   if(p[2] == expected[2] && p[3] == expected[3]){
@@ -76,12 +142,22 @@ public class Server {
 		   return false;
 	   }
 	   
+	   
+	   public boolean areEqual(DatagramPacket A, DatagramPacket B){
+		   if((A.getLength() == B.getLength()) && (A.getData()[2] == B.getData()[2]) && (A.getData()[3] == B.getData()[3])){
+			   return true;
+		   }
+		   return false;
+	   }
+	   
+	   
 	   public void updateBlockNum(byte[] data){
 		   //first and second bytes of ACK + 1 and stored into data block#;
-
+		   
 		   if(Byte.toUnsignedInt(new Byte(data[3])) != 255){
 			   int newSecond = Byte.toUnsignedInt(new Byte(data[3])) + 1;
 			   data[3] = (byte) newSecond;
+			   
 			   
 		   }else if(Byte.toUnsignedInt(new Byte(data[2])) == 0 && Byte.toUnsignedInt(new Byte(data[3])) == 255){
 			   int newFirst = Byte.toUnsignedInt(new Byte(data[2])) + 1;
@@ -92,7 +168,50 @@ public class Server {
 
 	   }
 	
-	
+	   public boolean verify(DatagramPacket p, byte[] expected , DatagramSocket t){
+		   if(p.getData()[0] == expected[0] && p.getData()[1] == expected[1]){
+		   if(p.getData()[2] == expected[2] && p.getData()[3] == expected[3]){
+			   
+			   // expected received, returning true.
+			   return true; // same as expected.
+
+		   }else if(p.getData()[2] < expected[2] ||( p.getData()[2] == expected[2] && p.getData()[3] < expected[3])){
+			   
+			   return false; // duplicated.
+		   }
+		   }
+
+		   // the received ACK is bigger than the expected one.
+		   System.out.println("Client: Sending ERROR packet (code 4).");
+		   // sends error 4
+		   error((byte)4, p.getAddress(), p.getPort(), t);
+		   return false;
+	   }
+	   
+	   
+	   public boolean checkAddPort(DatagramPacket p , InetAddress expAdd, int expPort , DatagramSocket t){
+		   	if(p.getAddress() == expAdd || p.getPort() == expPort){
+		   		return true;
+		   	}else{
+		   		try{
+		   			//if(verbose){
+						System.out.println("Error, unknown transfer ID");
+						System.out.println("Expected transfer ID: " + expPort);
+						System.out.println("Received packet's transfer ID: " + p.getPort());
+						System.out.println("Expected Address: " + expAdd);
+						System.out.println("Received packet's Address: " + p.getAddress());
+		   			//}
+				error((byte) 5, p.getAddress(), p.getPort(), t);
+		   		}catch(Exception e){
+		   			e.printStackTrace();
+		   		}
+		   		return false;
+		   	}
+	   }
+	   
+	   
+	   
+	   
 	/**
 	 * This method will check to ensure that the given packet data is a valid TFTP packet. This method will
 	 * also extract the filename and the mode of a read or write request and place them in the global
@@ -164,92 +283,26 @@ public class Server {
 	 * @param receivedPacket data held in the write request
 	 * @param port port number from which the write request came
 	 */
-	public void write(byte[] receivedPacket, int port, InetAddress address, String receivedFileName) {
-		DatagramSocket transferSocket;	//Socket through which the transfer is done
-		DatagramPacket lastPacket = new DatagramPacket(new byte[516], 516);
-		byte block;	//The current block of data being transferred
-		byte[] expData = {0, 3, 0, 1};
-		//Create data for an ACK packet
-		byte[] connection = new byte[4];
-		connection[0] = (byte) 0;
-		connection[1] = (byte) 4;
-		connection[2] = (byte) 0;
-		connection[3] = (byte) 0;
-		block = (byte) 1;
+	public boolean write(byte[] receivedPacket, int port, InetAddress address, String receivedFileName) {
+
+		File f = new File(path + "\\" + receivedFileName);
+		if (fileSet.contains(f)) {
+			System.out.println("File in use");
+			error((byte)2, address, port, transferSocket);
+			return false;
+		} 
+		fileSet.add(f);
 		try {
-
-			transferSocket = new DatagramSocket();
-
-
-			File f = new File(path + "\\" + receivedFileName);
-			if (fileSet.contains(f)) {
-				System.out.println("File in use");
-				error((byte)2, port, transferSocket, address);
-				return;
-			} 
-			fileSet.add(f);
 			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(f));
-			while(true) {
-				//Send ACK packet
-				DatagramPacket establishPacket = new DatagramPacket(connection, connection.length, 
-						address, port);
-				System.out.println("Sending ACK");
-				Client.analyzePacket(establishPacket);
-				transferSocket.send(establishPacket);
-				
-				//Receive
-				byte[] receiveFile = new byte[516];
-				establishPacket = new DatagramPacket(receiveFile, receiveFile.length);
-				transferSocket.receive(establishPacket);
-				Client.analyzePacket(establishPacket);
-				System.out.println("Received a packet.");
-				if (!isValid(establishPacket.getData(), block, port)) {
-					System.out.println("Packet recieved from host has an invalid Opcode, reporting back to Host");
-					error((byte)4, port, transferSocket, address);
-				}
-				else {
-					if (lastPacket.getData()[3] == establishPacket.getData()[3]) {
-						System.out.println("Discarding Data pack as it is a duplicate");
-					} else if(verifyBlock(establishPacket.getData(), expData)) {
-						updateBlockNum(expData);
-						try {
-							out.write(receiveFile, 4, establishPacket.getLength() - 4);
-						} 
-						catch (AccessControlException e) {
-							System.out.println("Server does not have permission to access file.");
-							error((byte)2, port, transferSocket, address);
-							fileSet.remove(f);
-							return;
-						} catch (IOException e) {
-							//It's possible this may be able to catch multiple IO errors along with error 3, in
-							//which case we might be able to just add a switch that identifies which error occurred
-							System.out.println("IOException: " + e.getMessage());
-							//Send an ERROR packet with error code 3 (disk full)
-							error((byte)3, port, transferSocket, address);
-							fileSet.remove(f);
-							return;
-						}
-						lastPacket = establishPacket;
-						//A packet of less than max size indicates the end of the transfer
-						if (establishPacket.getLength() < 516) break;
-						block++;
-						updateBlockNum(connection);
-					}
-
-				}
-			}
-			//Send ACK packet
-			updateBlockNum(connection);
-			DatagramPacket establishPacket = new DatagramPacket(connection, connection.length, 
-					address, port);
-			System.out.println("Sending ACK");
-			Client.analyzePacket(establishPacket);
-			transferSocket.send(establishPacket);
-			fileSet.remove(f);
-			out.close();
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			error((byte)1, address, port, transferSocket);
+			return false;
 		}
+		///// Starting to write. //////
+		
+		return false;
+		
 	}
 
 	/**
@@ -257,70 +310,97 @@ public class Server {
 	 * @param receivedPacket data held in the read request
 	 * @param portport number from which the read request came
 	 */
-	public void read(byte[] receivedPacket, int port, InetAddress address, String receivedFileName) {
-		DatagramSocket transferSocket;	//Socket through which the transfer is done
-		DatagramPacket fileTransfer = null;
-		byte block;	//The current block of data being transferred
-		byte[] receive = new byte[4];	//Buffer for incoming packets
-		byte[] expAck = {0, 4, 0, 1};
-		byte[] connection = new byte[516];	//Buffer for outgoing packets
-		connection[0] = 0; connection[1] = 3;
-		connection[2] = 0; connection[3] = 1;
-		DatagramPacket received = new DatagramPacket(receive, receive.length);	//Holds incoming packets
-		try { 
-			transferSocket = new DatagramSocket();
-			byte[] sendingData = new byte[512];
-			File f = new File(path + "\\" + receivedFileName);
-			if (fileSet.contains(f)) {
-				System.out.println("File in use");
-				error((byte)2, port, transferSocket, address);
-				return;
-			}
-			BufferedInputStream input = new BufferedInputStream(new FileInputStream(f));
-			int x;	//End of stream indicator
-			while ((x = input.read(sendingData)) != -1) {
-				System.arraycopy(sendingData, 0, connection, 4, sendingData.length);
-				fileTransfer = new DatagramPacket(connection, x + 4, address, port);
-				do {
-					System.out.println("Sending DATA packet.");
-					Client.analyzePacket(fileTransfer);
-					
-					while(true){
-						transferSocket.send(fileTransfer);
-						try {
-							System.out.println("Attempting to Receive Ack");
-							received = receivePacket(transferSocket, received, port, 2000);
-							if(received.getData() != null && verifyBlock(received.getData(), expAck)){
-								updateBlockNum(expAck);
-								break;
+	public boolean read(byte[] receivedPacket, int port, InetAddress address, String receivedFileName) {
+		byte[] data = new byte[516];
+		byte[] expACK = {0, 4, 0, 1};
+		byte[] ack = new byte[4];
+		data[0] = 0; data[1] = 3;
+		data[2] = 0; data[3] = 1;
+		DatagramSocket transfer= null;
+		BufferedInputStream input = null;
+		DatagramPacket lastPacket = new DatagramPacket(receivedPacket, receivedPacket.length, address, port);
+		DatagramPacket receivedACK = new DatagramPacket(ack, ack.length);
+		boolean receivedIt;
+		
+		int n;
+		try {
+			transfer = new DatagramSocket();
+		} catch (SocketException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		File f = new File(path + "\\" + receivedFileName);
+		if (fileSet.contains(f)) {
+			System.out.println("File in use");
+			error((byte)2, address, port, transfer);
+			return false;
+		}
+		try {
+			input = new BufferedInputStream(new FileInputStream(f));
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			error((byte)1, address, port, transfer);
+			return false;
+		}
+		////// Starting to read ///////
+		while(true){
+			receivedIt = false;
+			//send data
+			try{
+				if((n = input.read(data, 4, data.length-4))!= -1){
+					DatagramPacket sendData = new DatagramPacket(data, n+4, address, port);
+					for(int i = 1; i<6 ; i++){
+						try{
+						System.out.println("Server: Sending Data:");
+						analyzePacket(sendData);
+						transfer.send(sendData);
+						transfer.setSoTimeout(1000);
+						// waits for ack
+						transfer.receive(receivedACK);
+						transfer.setSoTimeout(0);
+						if(receivedACK.getData()[1] == 5){
+							if(checkTypeError(receivedACK)){
+								return false; // terminates the connection.
 							}
-						} catch (SocketTimeoutException e) {
-							System.out.println("Ack Receive Timed out, Resending Data");
-							transferSocket.send(fileTransfer);
+						}else if(verify(receivedACK, expACK, transfer) && checkAddPort(receivedACK, lastPacket.getAddress(), lastPacket.getPort(), transfer)){
+							lastPacket = receivedACK;
+							updateBlockNum(expACK);
+							updateBlockNum(data);
+							receivedIt = true;
+							System.out.println("Server: received ACK:");
+							analyzePacket(receivedACK);
+							break;
 						}
+						
+						}catch(SocketTimeoutException e){
+							//if verbose
+							System.out.println("Server: Waiting for Ack timedout for the " + i + " time.");
+						}
+					
 					}
-					//Check for any IO errors
-					if (received.getData()[1] == (byte) 5 &&
-						(received.getData()[3] == (byte) 1 || received.getData()[3] == (byte) 2 ||
-							received.getData()[3] == (byte) 3 || received.getData()[3] == (byte) 6))
-					{
-						System.out.println("IO error detected. Ending file transfer.");
+					if(!receivedIt){
+						System.out.println("Server: Did not receive a Packet, Server is terminating the connection.");
+						input.close();
+						return false;
 					}
-				} while (received.getData()[1] == (byte) 5);	//Re-send if an ERROR is received
-				updateBlockNum(connection);
-			}
-			if(connection.length == 516 && x == -1){
-				System.out.println("Sending Empty, DATA packet.");
-				transferSocket.send(new DatagramPacket(connection, 4, address, port));
-				// receives ack for that.
-				System.out.println("Attempting to Receive Last Ack");
-				transferSocket.receive(fileTransfer);
+					
+				}else if(lastPacket.getLength() == 516){
+					// send empty data packet.
+					System.out.println("Server: Sending empty data packet.");
+					analyzePacket(new DatagramPacket(data, 4));
+					transfer.send(new DatagramPacket(data, 4, address, port));
+					input.close();
+					return true;
+				}else{
+					return true;
+				}
+
+			}catch(IOException e){
+				//
 			}
 			
-			input.close();
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
+		
 	}
 
 	/**
@@ -328,7 +408,7 @@ public class Server {
 	 * @param ErrorCode TFTP error code of the ERROR packet
 	 * @param port port to send the packet through
 	 */
-	public void error(byte ErrorCode, int port, DatagramSocket transferSocket, InetAddress address){
+	public void error(byte ErrorCode, InetAddress address, int port, DatagramSocket transferSocket){
 		//DatagramSocket transferSocket;	//Socket to be sent through
 		try {
 			//transferSocket = new DatagramSocket();
@@ -365,17 +445,17 @@ public class Server {
 				error = false;
 				transferSocket.setSoTimeout(timeout);
 				transferSocket.receive(receivePacket);
-				Client.analyzePacket(receivePacket);
+				analyzePacket(receivePacket);
 				//Ensure received packet is a valid TFTP operation
 				if (!isValid(receivePacket.getData(), receivePacket.getData()[3], port)) {
 					System.out.println("Error, illegal TFTP operation!");
-					error((byte) 4, receivePacket.getPort(), transferSocket, receivePacket.getAddress());
+					error((byte) 4, receivePacket.getAddress() , receivePacket.getPort(), transferSocket);
 					error = true;
 				}
 				//Ensure received packet came from the intended sender
 				if (receivePacket.getPort() != port) {
 					System.out.println("Error, unknown transfer ID");
-					error((byte) 5, receivePacket.getPort(), transferSocket, receivePacket.getAddress());
+					error((byte) 5, receivePacket.getAddress() , receivePacket.getPort(), transferSocket);
 					error = true;
 				}
 			}
@@ -418,17 +498,14 @@ public class Server {
 			public void run() {
 				while (true) { // run till shutdown requested
 					if(!shutdown) {
-						System.out.println("Enter quit to shutdown the Server: ");
+						System.out.print("Enter quit to shutdown the Server: ");
 						Scanner in = new Scanner(System.in);
 						String input = in.nextLine().toLowerCase();
 						if (input.equals("quit")) {
 							in.close();
 							shutdown = true;
 						}
-						//						close = JOptionPane.showConfirmDialog(null, modeLabel, "Warning", JOptionPane.CLOSED_OPTION);
-						//						if (close == 0) { // ok has been selected, set shutdown to true
-						//							shutdown = true;
-						//						}
+
 					} else if (shutdown && activeThreads.isEmpty()) { // wait till all active threads finish & shutdown requested
 						System.out.println("Server has shut down");
 						System.exit(0);
@@ -443,7 +520,7 @@ public class Server {
 
 				//Server receives a read or write request
 				transferSocket.receive(receival);
-				Client.analyzePacket(receival);
+				analyzePacket(receival);
 				System.out.println("Received a packet.");
 				int port = receival.getPort();
 				InetAddress address = receival.getAddress();
@@ -459,30 +536,37 @@ public class Server {
 								if (!new File(path + "\\" + receivedFileName).exists()) {
 									System.out.println("File Does Not Exist");
 									try {
-										error((byte) 1, port, new DatagramSocket(), address);
+										error((byte) 1, address, port , new DatagramSocket());
 									} catch (SocketException e) {
 										e.printStackTrace();
 									}
 									return;
 								}
-								read(b, port, address, receivedFileName);
+								if(read(b, port, address, receivedFileName)){
+									System.out.println("A thread has completed execution.");
+								}else{
+									System.out.println("A thread has not completed execution.");
+								}
 							} else if (b[1] == 2) {
 								System.out.println("Write request recieved");
 								if (new File(path + "\\" + receivedFileName).exists()) {
 									System.out.println("File Already Exists");
 									try {
-										error((byte) 6, port, new DatagramSocket(), address);
+										error((byte) 6, address, port , new DatagramSocket());
 									} catch (SocketException e) {
 										e.printStackTrace();
 									}
 									return;
 								}
-								write(b, port, address, receivedFileName);
+								if(write(b, port, address, receivedFileName)){
+									System.out.println("A thread has completed execution.");
+								}else{
+									System.out.println("A thread has not completed execution.");
+								}
 							} else {
 								System.out.println("ERR");
 							}
 							activeThreads.pop();
-							System.out.println("A thread has completed execution.");
 						}
 					}).start();
 				} else {
