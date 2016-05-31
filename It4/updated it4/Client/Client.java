@@ -319,7 +319,7 @@ public class Client {
    public void CreateInStream() throws FileNotFoundException, IOException
    {
 	   // to be able to read from filename/path 
-	   in = new BufferedInputStream(new FileInputStream(filename));
+	   in = new BufferedInputStream(new FileInputStream(path + "\\" + filename));
 
    }
    
@@ -508,6 +508,7 @@ public class Client {
 	   data[2] = 0; data[3] = 1;
 	   byte[] expACK = {0,4,0,0};
 	   boolean receivedIt = false;
+	   DatagramPacket lastPacket = null;
 
 	   // prepareing the receive packet to receive the acknowledge.
 	   receivePacket = new DatagramPacket(ack, ack.length);
@@ -529,7 +530,12 @@ public class Client {
 				sendReceiveSocket.setSoTimeout(1000);
 				sendReceiveSocket.receive(receivePacket);
 				// we received it in time, validate it.
-				if(verify(receivePacket, expACK)){
+				if(receivePacket.getData()[1] == 5){
+					if(checkTypeError(receivePacket)){
+						return false;
+					}
+				}else if(verify(receivePacket, expACK)){
+					lastPacket = receivePacket;
 					receivedIt = true;
 					updateBlockNum(expACK);
 					break;
@@ -602,7 +608,7 @@ public class Client {
 							 System.out.print(data[j] + " ");
 						}
 						System.out.println();
-						sendReceiveSocket.send(new DatagramPacket(data, 4+n , InetAddress.getLocalHost(), sendPort)); // 4(opcode and block#) + n (how many bytes we read from file)
+						sendReceiveSocket.send(new DatagramPacket(data, 4+n , lastPacket.getAddress(), lastPacket.getPort())); // 4(opcode and block#) + n (how many bytes we read from file)
 					}catch(IOException e){
 						e.printStackTrace();
 						System.exit(1);
@@ -614,14 +620,16 @@ public class Client {
 						sendReceiveSocket.setSoTimeout(1000);
 						sendReceiveSocket.receive(receivePacket);
 						// we received it in time, validate it.
-						if(verify(receivePacket, expACK)){
+						if(receivePacket.getData()[1] == 5){
+							if(checkTypeError(receivePacket)){
+								return false;
+							}
+						}else if(verify(receivePacket, expACK) && checkAddPort(receivePacket, lastPacket.getAddress(), lastPacket.getPort())){
 							receivedIt = true;
 							// we need to update the data block # corresponding to the ACK block #;
 							updateBlockNum(expACK);
 							break;
 						}
-						
-						
 						}catch(SocketTimeoutException e){
 						System.out.println("Waiting for ACK" + i + "  Timedout. ( " + (5-i) +" ) tries left");
 						}
@@ -635,12 +643,13 @@ public class Client {
 				}
 			   //---------------------------------------------------------//
 				/* Printing what we've sent */
-				System.out.println("Client: ACK Packet received");
-				System.out.println("Containing: ");
-				for (int j=0;j<4;j++) {
-					 System.out.print(receivePacket.getData()[j] + " ");
+				if(verbose){
+					System.out.println("Client: ACK Packet received");
+					System.out.println("Containing: ");
+					for (int j=0;j<4;j++) {
+						 System.out.print(receivePacket.getData()[j] + " ");
+					}
 				}
-				
 				updateACK(receivePacket.getData()[2], receivePacket.getData()[3], data);
 				
 			}else{ 
