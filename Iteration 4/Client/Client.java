@@ -443,6 +443,7 @@ public class Client {
 							}
 						 if(receivePacket.getData()[1] == 5){
 							if(checkTypeError(receivePacket)){
+								out.close();
 								return false; // terminates the connection.
 							}
 						 }else if(verify(receivePacket, expData) && checkAddPort(receivePacket, lastPacket.getAddress(), lastPacket.getPort())){
@@ -623,6 +624,7 @@ public class Client {
 						// we received it in time, validate it.
 						if(receivePacket.getData()[1] == 5){
 							if(checkTypeError(receivePacket)){
+								in.close();
 								return false;
 							}
 						}else if(verify(receivePacket, expACK) && checkAddPort(receivePacket, lastPacket.getAddress(), lastPacket.getPort())){
