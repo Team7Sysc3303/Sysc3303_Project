@@ -44,7 +44,7 @@ public class Server {
 	 *  Shutdown flag to show if shutdown has been requested
 	 */
 	private boolean shutdown;
-	
+
 	
 	private boolean verbose = true;
 
@@ -167,6 +167,25 @@ public class Server {
 		   }
 
 	   }
+	   
+	   public void writeData(DatagramPacket p, BufferedOutputStream out , String filename, DatagramSocket t){
+		   if(new File(path + "\\" + filename).canWrite()){
+		   try {
+			   out.write(p.getData(), 4, p.getLength()-4);
+			} catch (IOException e) {
+				//It's possible this may be able to catch multiple IO errors along with error 3, in
+				//which case we might be able to just add a switch that identifies which error occurred
+				System.out.println("IOException: " + e.getMessage());
+				//Send an ERROR packet with error code 3 (disk full)
+				error((byte)3, p.getAddress(), p.getPort(), t);
+			}
+		   }else{
+			   
+				System.out.println("Client: Cannot write to file, file is ReadOnly.");
+				error((byte)2, p.getAddress(), p.getPort(), t);
+				//System.exit(1);
+		   }
+	   }
 	
 	   public boolean verify(DatagramPacket p, byte[] expected , DatagramSocket t){
 		   if(p.getData()[0] == expected[0] && p.getData()[1] == expected[1]){
@@ -284,7 +303,14 @@ public class Server {
 	 * @param port port number from which the write request came
 	 */
 	public boolean write(byte[] receivedPacket, int port, InetAddress address, String receivedFileName) {
-
+		DatagramSocket transfer = null;
+		BufferedOutputStream out;
+		byte[] data = new byte[516];
+		DatagramPacket receivedData = new DatagramPacket(data, data.length);
+		byte[] ack = {0, 4, 0, 0};
+		byte[] expData = {0, 3, 0 , 1};
+		DatagramPacket lastPacket = null;
+		
 		File f = new File(path + "\\" + receivedFileName);
 		if (fileSet.contains(f)) {
 			System.out.println("File in use");
@@ -293,16 +319,54 @@ public class Server {
 		} 
 		fileSet.add(f);
 		try {
-			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(f));
+			out = new BufferedOutputStream(new FileOutputStream(f));
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			error((byte)1, address, port, transferSocket);
 			return false;
 		}
-		///// Starting to write. //////
 		
-		return false;
-		
+		// create socket
+		try {
+			transfer = new DatagramSocket();
+		} catch (SocketException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		while(true){
+			// send ack
+			try {
+				System.out.println("Server: Sending ACK:");
+				analyzePacket(new DatagramPacket(ack, ack.length, address, port));
+				transfer.send(new DatagramPacket(ack, ack.length, address, port));
+				// receive data
+				transfer.receive(receivedData);
+				if(receivedData.getData()[1] == 5){
+					if(checkTypeError(receivedData)){
+						return false;
+					}
+				}else if(verify(receivedData, expData, transfer) && checkAddPort(receivedData, address, port, transfer)){
+					writeData(receivedData, out, receivedFileName, transfer); // writes to file.
+					updateBlockNum(ack);
+					updateBlockNum(expData);
+					System.out.println("Server: Data packet received:");
+					analyzePacket(receivedData);
+					if(receivedData.getLength() < 516){
+						// sends last ack and halt.
+						System.out.println("Server: Sending last Ack.");
+						analyzePacket(new DatagramPacket(ack, ack.length, address, port));
+						transfer.send(new DatagramPacket(ack, ack.length, address, port));
+						return true;
+					}
+					
+				}
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
+		}
+
 	}
 
 	/**
