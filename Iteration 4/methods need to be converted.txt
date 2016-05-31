@@ -1,0 +1,105 @@
+	/**
+	 * Function to simulate error code 4 (Invalid TFTP Operation)
+	 * @param p the current packet
+	 * @param sendPort the port the packet should be sent to
+	 */
+private void simulateError4(DatagramPacket p, int sendPort, DatagramSocket newClientSocket, InetAddress clientAddress) {
+		System.out.println("------------------------------------------------");
+		System.out.println("Invalid TFTP Operation Simulation (Error Code 4)");
+		String first, second;
+		InetAddress firstAdd, secondAdd;
+		DatagramSocket firstSocket, secondSocket;
+		int firstPort, secondPort;
+		try {
+			if (sendPort == server) {
+				first = "Server"; 
+				firstSocket = serverSocket;
+				firstPort = server;
+				firstAdd = InetAddress.getLocalHost();
+				second = "Client";
+				secondSocket = newClientSocket;
+				secondPort = client;
+				secondAdd = clientAddress;
+			} else {
+				first = "Client";
+				firstSocket = newClientSocket;
+				firstPort = client;
+				firstAdd = clientAddress;
+				second = "Server";
+				secondSocket = serverSocket;
+				secondPort = server;
+				secondAdd = InetAddress.getLocalHost();
+			}
+			byte[] b = createFalsePacket(p);
+
+			System.out.println("Sending Invalid packet to " + first);
+			DatagramPacket packet = new DatagramPacket(b, b.length, firstAdd, firstPort);
+			firstSocket.send(packet);
+			firstSocket.receive(packet);
+			System.out.println("Received " + packetInfo(packet) + " from " + first);
+			System.out.println("Sending " + packetInfo(packet) + " to " + second);
+			p.setPort(secondPort);
+			p.setAddress(secondAdd);
+			secondSocket.send(packet);
+			secondSocket.receive(packet);
+			System.out.println("Received " + packetInfo(packet) + "from " + second);
+			System.out.println("---------------------------------------------------");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}		
+	}
+
+	/**
+	 * Function to simulate error 5 (Invalid TID)
+	 * @param p the current packet
+	 * @param sendPort the port the current packet should be sent to
+	 */
+	private void simulateError5(DatagramPacket p, int sendPort, InetAddress clientAddress) {
+		System.out.println("-------------------------------------");
+		System.out.println("Invalid TID Simulation (Error Code 5)");
+
+		try {
+			String first, second;
+			if (sendPort == server) {
+				first = "Server"; 
+				second = "Client";
+			} else {
+				first = "Client";
+				second = "Server";
+			}
+			DatagramSocket TIDErrorSocket = new DatagramSocket();
+
+			DatagramPacket newPacket;
+			if (sendPort == server) {
+				newPacket = new DatagramPacket(p.getData(), p.getLength(), InetAddress.getLocalHost(), sendPort);
+			} else {
+				newPacket = new DatagramPacket(p.getData(), p.getLength(), clientAddress, sendPort);
+			}
+
+			System.out.println("Sending to " + first + " using new Socket");
+			TIDErrorSocket.send(newPacket);
+			byte[] b = new byte[516];
+			DatagramPacket receive = new DatagramPacket(b, 516);
+			TIDErrorSocket.receive(receive);
+			if (packetInfo(receive).equals("ERROR")) {
+				System.out.println("Received a " + packetInfo(receive) + "packet from " + first);
+			}
+			if (sendPort == server) {
+				receive.setPort(client);
+				receive.setAddress(clientAddress);
+			} else {
+				receive.setPort(server);
+				receive.setAddress(InetAddress.getLocalHost());
+			}
+			TIDErrorSocket.send(receive);
+			System.out.println("Sending Error Packet to " + second);						
+			b = new byte[516];
+			receive = new DatagramPacket(b, 516);
+			TIDErrorSocket.receive(receive);
+			System.out.println("Received a " + packetToPerform + "from " + second);
+			System.out.println("-------------------------------------");
+			TIDErrorSocket.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
