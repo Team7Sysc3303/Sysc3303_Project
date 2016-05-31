@@ -343,6 +343,8 @@ public class Server {
 				transfer.receive(receivedData);
 				if(receivedData.getData()[1] == 5){
 					if(checkTypeError(receivedData)){
+						fileSet.remove(f);
+						out.close();
 						return false;
 					}
 				}else if(verify(receivedData, expData, transfer) && checkAddPort(receivedData, address, port, transfer)){
@@ -356,6 +358,8 @@ public class Server {
 						System.out.println("Server: Sending last Ack.");
 						analyzePacket(new DatagramPacket(ack, ack.length, address, port));
 						transfer.send(new DatagramPacket(ack, ack.length, address, port));
+						out.close();
+						fileSet.remove(f);
 						return true;
 					}
 					
@@ -424,6 +428,8 @@ public class Server {
 						transfer.setSoTimeout(0);
 						if(receivedACK.getData()[1] == 5){
 							if(checkTypeError(receivedACK)){
+								input.close();
+								fileSet.remove(f);
 								return false; // terminates the connection.
 							}
 						}else if(verify(receivedACK, expACK, transfer) && checkAddPort(receivedACK, lastPacket.getAddress(), lastPacket.getPort(), transfer)){
@@ -454,8 +460,11 @@ public class Server {
 					analyzePacket(new DatagramPacket(data, 4));
 					transfer.send(new DatagramPacket(data, 4, address, port));
 					input.close();
+					fileSet.remove(f);
 					return true;
 				}else{
+					fileSet.remove(f);
+					input.close();
 					return true;
 				}
 
