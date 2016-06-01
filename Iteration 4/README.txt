@@ -25,24 +25,6 @@ Suhib Habush - 100898373
 
 
 
-Responsibilities
-
-----------------
-
-
-- Abdulrahman: Timing Diagrams + README
-
-- Denis:
-
-- Franklin:
-
-- Hussain: Fixed the errors in Iteration 3 + Sorcerer’s Apprentice Bug + Testing 
-
-- Omar:
-
-- Suhib:
-
-
 
 
 Set up and Test Instructions
