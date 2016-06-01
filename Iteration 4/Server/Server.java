@@ -404,7 +404,7 @@ public class Server {
 			return false;
 		}
 		try {
-			input = new BufferedInputStream(new FileInputStream(path + "\\" + f));
+			input = new BufferedInputStream(new FileInputStream(f));
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			error((byte)1, address, port, transfer);
