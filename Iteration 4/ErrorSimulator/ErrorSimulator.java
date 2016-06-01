@@ -1,4 +1,6 @@
-package iteration1;
+package ErrorSimulator;
+
+
 
 import java.io.IOException;
 import java.net.*;
@@ -9,7 +11,7 @@ public class ErrorSimulator extends Thread{
 	private boolean done = false; // Variable to keep track of whether the file transfer is done
 	// Mode of operation entered by the user. 0 for Normal mode, 1 for lost mode, 2 for delayed mode, 3 for duplicate mode, 4 to shutdown the error simulator
 	private int Selection;
-	private int serverPort = 1069; // the server port will be initiated to 69 and will change according to the thread needed 
+	private int serverPort = 69; // the server port will be initiated to 69 and will change according to the thread needed 
 	private DatagramSocket serverSocket, clientSocket; // socket deceleration for all three required sockets 
 	private DatagramPacket sendClientPacket, receiveClientPacket, sendServerPacket , receiveServerPacket; // packet deceleration for all packets being sent and received for both client and server
 	private byte clientData[]; // Stores the data received from the client
@@ -396,11 +398,6 @@ public class ErrorSimulator extends Thread{
 					System.out.println("After a delay of : " + delay + "ms, Sending duplicate data");
 					}
 				}
-				if (!(foundPacket(receiveServerPacket))){
-					if(verbose){
-					System.out.println("Data retrieved from the Server is not the desired data to be duplicated. Sending single data to client...");
-					}
-				}
 				clientSend();
 				verifyPacketSize();
 				firstPacket = false;
@@ -430,11 +427,6 @@ public class ErrorSimulator extends Thread{
 					}
 					// switch back to normal operation
 					Selection = 0;
-				}
-				if (!(foundPacket(receiveServerPacket))){
-					if(verbose){
-					System.out.println("ACK retrieved from the Client is not the desired ACK to be duplicated. Sending single data to client...");
-					}
 				}
 				serverSend();
 				// Check if the last acknowledge was just sent to the server
@@ -479,11 +471,6 @@ public class ErrorSimulator extends Thread{
 					Selection = 0;
 					if(verbose){
 					System.out.println("After a delay of : " + delay + "ms, sending duplicate data...");
-					}
-				}
-				if (!(foundPacket(receiveServerPacket))){
-					if(verbose){
-					System.out.println("Data retrieved from the client is not the desired data to be duplicated. Sending single data to server...");
 					}
 				}
 				serverSend(); // If the duplicate was found, send the duplicate data to the server. Otherwise, this still sends the data it receives to the server, without duplicating it.
