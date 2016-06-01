@@ -1,5 +1,9 @@
 package ErrorSimulator;
 
+
+
+
+
 import java.io.IOException;
 import java.net.*;
 import java.util.Scanner;
@@ -205,4 +209,3 @@ private void printInformation(DatagramPacket p) {
 			System.exit(0);
 		} // end method
 	} // end class
-		
