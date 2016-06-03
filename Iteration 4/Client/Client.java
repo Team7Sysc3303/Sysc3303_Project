@@ -1,6 +1,4 @@
 package Client;
-
-
 // TFTPClient.java
 // This class is the client side for a very simple assignment based on TFTP on
 // UDP/IP. The client uses one port and sends a read or write request and gets 
@@ -22,7 +20,7 @@ public class Client {
    private static int sendPort;
    private static boolean verbose = true;
    private static String path;
-   
+   private boolean terminate = false;
    // we can run in normal (send directly to server) or test
    // (send to simulator) mode
    public static enum Mode { NORMAL, TEST};
@@ -184,6 +182,7 @@ public class Client {
 	   System.out.println("Expected was: " + expected[0] + expected[1] + expected[2] + expected[3]);
 	   // sends error 4
 	   error((byte)4, p.getAddress(), p.getPort());
+	   terminate = true;
 	   return false;
    }
    
@@ -199,11 +198,13 @@ public class Client {
 			System.out.println("IOException: " + e.getMessage());
 			//Send an ERROR packet with error code 3 (disk full)
 			error((byte)3, p.getAddress(), p.getPort());
+			terminate = true;
 		}
 	   }else{
 		   
 			System.out.println("Client: Cannot write to file, file is ReadOnly.");
 			error((byte)2, p.getAddress(), p.getPort());
+			terminate = true;
 			//System.exit(1);
 	   }
    }
@@ -387,6 +388,10 @@ public class Client {
 						System.arraycopy(receivePacket.getData(), 0, data, 0, receivePacket.getLength()); // ensures that the data received is in data[].
 						break;
 					}
+					if(terminate){
+						terminate = false;
+						return false;
+					}
 					
 					
 				}catch(SocketTimeoutException e){
@@ -413,13 +418,20 @@ public class Client {
 					e.printStackTrace();
 				}
 			// we write the data received
-			
-			writeData(receivePacket);
 			if(verbose){
 				analyzePacket(receivePacket);
 			}
 			/*                          */
 			sendReceiveSocket.setSoTimeout(0);
+			
+			
+			writeData(receivePacket);
+			if(terminate){
+				terminate = false;
+				return false;
+			}
+
+
 		}else{
 				while(true){
 					try{
@@ -456,6 +468,9 @@ public class Client {
 							System.arraycopy(receivePacket.getData(), 0, data, 0, receivePacket.getLength()); // ensures that the data received is in data[].
 							break;
 						}
+						 if(terminate){
+							 return false;
+						 }
 					}catch(IOException e){
 						e.printStackTrace();
 						System.exit(1);
@@ -465,7 +480,10 @@ public class Client {
 				
 				// we write the data received
 				writeData(receivePacket);
-				
+				if(terminate){
+					terminate = false;
+					return false;
+				}
 				updateBlockNum(ack);
 		}
 		if(receivePacket.getLength() < 516){
@@ -545,6 +563,10 @@ public class Client {
 					receivedIt = true;
 					updateBlockNum(expACK);
 					break;
+				}
+				if(terminate){
+					terminate = false;
+					return false;
 				}
 				
 				
@@ -635,9 +657,13 @@ public class Client {
 							updateBlockNum(expACK);
 							break;
 						}
-						}catch(SocketTimeoutException e){
-						System.out.println("Waiting for ACK" + i + "  Timedout. ( " + (5-i) +" ) tries left");
+						if(terminate){
+							terminate = false;
+							return false;
 						}
+					}catch(SocketTimeoutException e){
+						System.out.println("Waiting for ACK" + i + "  Timedout. ( " + (5-i) +" ) tries left");
+					}
 
 					
 				} // end waiting for ack
