@@ -90,27 +90,27 @@ public class Server {
 		   switch(p.getData()[3]){
 		   case (byte) 1: case (byte) 2: case (byte) 3: case (byte) 6:
 			   if(verbose){
-			    System.out.println("Client: ERROR packet received (IO error)");
-		   		System.out.println("Client: Terminating the connection.");
+			    System.out.println("Server: ERROR packet received (IO error)");
+		   		System.out.println("Server: Terminating the connection.");
 			   }
 		   		return true;
 		   case (byte) 4:
 			   if(verbose){
-			    System.out.println("Client: ERROR packet received (Code 4: Invalid packet)");
-		   		System.out.println("Client: Terminating the connection.");
+			    System.out.println("Server: ERROR packet received (Code 4: Invalid packet)");
+		   		System.out.println("Server: Terminating the connection.");
 			   }
 		   		return true;
 		   case (byte) 5:
 			   if(verbose){
-			    System.out.println("Client: ERROR packet received (Code 5: Unknown Transfer ID)");
-		   		System.out.println("Client: Terminating the connection.");
+			    System.out.println("Server: ERROR packet received (Code 5: Unknown Transfer ID)");
+		   		System.out.println("Server: Terminating the connection.");
 			   }
 		   		return true;
 			   
 		   }
 		   if(verbose){
-		   System.out.println("Client: ERROR packet received (Code UNKNOWN)");
-		   System.out.println("Client: ERROR packet ignored");
+		   System.out.println("Server: ERROR packet received (Code UNKNOWN)");
+		   System.out.println("Server: ERROR packet ignored");
 		   }
 		   return false;
 	   }
