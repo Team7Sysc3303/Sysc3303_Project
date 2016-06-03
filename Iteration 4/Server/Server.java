@@ -641,8 +641,9 @@ public class Server {
 						}
 					}).start();
 				} else {
-					System.out.println("Not valid");
-					//do nothing;
+					System.out.println("Sending ERROR packet:");
+					// send error 4.
+					error((byte)4, receival.getAddress(), receival.getPort(), new DatagramSocket());
 				}
 
 			}
