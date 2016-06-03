@@ -103,6 +103,44 @@ public void receiveClientRequest(){
 			System.out.println("Enter the delay between duplication in milliseconds: ");
 			delay = input.nextInt();
 		}
+    
+		else if (Selection == 4) {
+			@SuppressWarnings("resource")
+			Scanner input = new Scanner(System.in);
+			System.out.println("Operating Error Simulator to generate Error 4, as specified by the user");
+			System.out.println("Enter packet type to be manipulated: 1 for RRQ; 2 for WRQ; 3 for DATA; 4 for ACK");
+			packetType = input.nextInt();
+
+			// If packet type to be duplicated is DATA or ACK, get the speific packet number
+			if (packetType == 3 || packetType == 4){
+				System.out.println("Which packet do you want to manipulated: ");
+				packetNumber = input.nextInt();
+			}
+
+			// If the packet to be duplicated is a request, we will just duplicated the first packet
+			else {
+				packetNumber = 1;
+			}
+		}
+    
+		else if (Selection == 5) {
+			@SuppressWarnings("resource")
+			Scanner input = new Scanner(System.in);
+			System.out.println("Operating Error Simulator to generate Error 5, as specified by the user");
+			System.out.println("Enter packet type whose TID is to be changed: 1 for RRQ; 2 for WRQ; 3 for DATA; 4 for ACK");
+			packetType = input.nextInt();
+
+			// If packet type to be duplicated is DATA or ACK, get the speific packet number
+			if (packetType == 3 || packetType == 4){
+				System.out.println("Which packet do you want to manipulate its TID: ");
+				packetNumber = input.nextInt();
+			}
+
+			// If the packet to be duplicated is a request, we will just duplicated the first packet
+			else {
+				packetNumber = 1;
+			}
+		}
 
 		
 		clientData = new byte[DATA_SIZE]; // Create a new array of 516 bytes for client data storage
@@ -178,12 +216,12 @@ private void printInformation(DatagramPacket p) {
 				while (!validEntry) {
 
 					// print out information for the user depending on the mode of run they want to use
-					System.out.println("Hello World! Enter the mode operation you would like today. 0 for Normal mode, 1 for lost mode, 2 for delayed mode, 3 for duplicate mode, 4 to shutdown the error simulator");
+					System.out.println("Hello World! Enter the mode operation you would like today. 0 for Normal mode, 1 for lost mode\n, 2 for delayed mode\n, 3 for duplicate mode\n, 4 to simulate an Error 4 transfer\n, 5 to simulate an Error 5 transfer\n, 9 to shutdown the error simulator\n");
 					System.out.println("Please enter a mode for the Error Simulator to start in:");
 
 					Selection = in.nextInt();
 					// check if a valid choice has been entered
-					if (Selection == 0 || Selection == 1 || Selection == 2 || Selection == 3 || Selection ==4) {
+					if (Selection == 0 || Selection == 1 || Selection == 2 || Selection == 3 || Selection == 4 || Selection == 5 || Selection ==9) {
 						validEntry = true;
 					}
 					else {
@@ -191,7 +229,7 @@ private void printInformation(DatagramPacket p) {
 						validEntry = false;
 					}
 				} // end while
-                if (Selection == 4){
+                if (Selection == 9){
                     shutdown = true; // if user input is 4, Shutdown the Error simulator 
                 }
 
