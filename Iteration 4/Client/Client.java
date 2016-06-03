@@ -428,6 +428,7 @@ public class Client {
 			writeData(receivePacket);
 			if(terminate){
 				terminate = false;
+				out.close();
 				return false;
 			}
 
@@ -469,6 +470,7 @@ public class Client {
 							break;
 						}
 						 if(terminate){
+							 out.close();
 							 return false;
 						 }
 					}catch(IOException e){
@@ -482,6 +484,7 @@ public class Client {
 				writeData(receivePacket);
 				if(terminate){
 					terminate = false;
+					out.close();
 					return false;
 				}
 				updateBlockNum(ack);
