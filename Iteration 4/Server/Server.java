@@ -322,6 +322,7 @@ public class Server {
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			error((byte)1, address, port, transferSocket);
+			fileSet.remove(f);
 			return false;
 		}
 		
@@ -364,6 +365,8 @@ public class Server {
 					
 				}
 				if(terminate){
+					out.close();
+					fileSet.remove(f);
 					terminate = false;
 					return false;
 				}
@@ -445,6 +448,7 @@ public class Server {
 							break;
 						}
 						if(terminate){
+							input.close();
 							terminate = false;
 							return false;
 						}
