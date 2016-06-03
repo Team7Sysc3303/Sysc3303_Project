@@ -43,7 +43,7 @@ public class Server {
 	 */
 	private boolean shutdown;
 
-	
+	private boolean terminate = false;
 	private boolean verbose = true;
 
 	public Server() {
@@ -202,6 +202,7 @@ public class Server {
 		   System.out.println("Client: Sending ERROR packet (code 4).");
 		   // sends error 4
 		   error((byte)4, p.getAddress(), p.getPort(), t);
+		   terminate = true;
 		   return false;
 	   }
 	   
@@ -439,7 +440,10 @@ public class Server {
 							analyzePacket(receivedACK);
 							break;
 						}
-						
+						if(terminate){
+							terminate = false;
+							return false;
+						}
 						}catch(SocketTimeoutException e){
 							//if verbose
 							System.out.println("Server: Waiting for Ack timedout for the " + i + " time.");
