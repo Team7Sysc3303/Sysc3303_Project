@@ -142,6 +142,7 @@ public class Client {
 	   		}catch(Exception e){
 	   			e.printStackTrace();
 	   		}
+	   		terminate = true;
 	   		return false;
 	   	}
    }
@@ -312,6 +313,7 @@ public class Client {
 		if (new File(path + "\\" + filename).exists()) {
 			System.out.println("File Already Exists");
 			error((byte) 6, p.getAddress(), p.getPort());
+			terminate = true;
 			return false;
 		}
 	   writeFile = new File(path + "\\" + filename);
