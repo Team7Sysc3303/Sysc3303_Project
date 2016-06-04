@@ -176,11 +176,13 @@ public class Server {
 				System.out.println("IOException: " + e.getMessage());
 				//Send an ERROR packet with error code 3 (disk full)
 				error((byte)3, p.getAddress(), p.getPort(), t);
+				terminate = true;
 			}
 		   }else{
 			   
 				System.out.println("Client: Cannot write to file, file is ReadOnly.");
 				error((byte)2, p.getAddress(), p.getPort(), t);
+				terminate = true;
 				//System.exit(1);
 		   }
 	   }
@@ -223,6 +225,7 @@ public class Server {
 		   		}catch(Exception e){
 		   			e.printStackTrace();
 		   		}
+		   		terminate = true;
 		   		return false;
 		   	}
 	   }
