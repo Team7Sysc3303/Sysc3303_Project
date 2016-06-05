@@ -21,6 +21,7 @@ public class Client {
    private static boolean verbose = true;
    private static String path;
    private boolean terminate = false;
+   private static InetAddress destAdd;
    // we can run in normal (send directly to server) or test
    // (send to simulator) mode
    public static enum Mode { NORMAL, TEST};
@@ -615,7 +616,7 @@ public class Client {
 	} catch (IOException e) {
 		e.printStackTrace();
 	}
-	   try {
+
 		boolean finished = false;
 		byte[] read = new byte[512];
 		
@@ -624,6 +625,7 @@ public class Client {
 			receivedIt = false;
 			// condition to check if we aren't done yet from reading.
 			// read() returns -1 if we have no more data to be read from the file.
+		try{
 			if((n=in.read(read)) != -1 ){
 				// now read has the data, data has the first 4 bytes ready. therefore;
 				System.arraycopy(read, 0, data, 4, read.length);
@@ -694,12 +696,25 @@ public class Client {
 				in.close();
 				finished = true;
 			}
+			return true; // we finished our WRQ transfer.
+		}catch(FileNotFoundException e){
+			// something happened during the transfer led to filenot found
+			//------------------------------------------------------------------------
+			//------------------------------------------------------------------------
+		}catch(IOException e){
+			// IO exceptions during the transfer.
+			// -----------------------------------------------------------------------
+			//------------------------------------------------------------------------
+			
+			
+		}catch(Exception e){
+			// other exceptions. during transfer.
+			//------------------------------------------------------------------------
+			//------------------------------------------------------------------------
+			
+			
+		}
 	    }// end while
-		
-		return true; // we finished our WRQ transfer.
-	} catch (IOException e) {
-		e.printStackTrace();
-	}
 
 	   return false; // Something weird happened, WRQ transfer connection failed.
 
@@ -719,18 +734,26 @@ public class Client {
 	   
 	   String requestType;
 	   Scanner input = new Scanner(System.in);
-	   
-   	System.out.println("Client: Enter a directory path where client read/write from/to: [type Q to shutdown]: ");
+	   System.out.println("Client:");
+   	System.out.println("Enter a directory path where client read/write from/to: [type Q to shutdown]: ");
    	path = input.next();
    	if(path.equalsIgnoreCase("Q")){
    		System.out.println("Client: Shutting Down..");
    		System.exit(1);
    	}
+   	
+   	
+   	
+   		System.out.println("Enter your destination Address: ");
+   		destAdd = InetAddress.getByName(input.next());
+   		
+   		
+   		
        // loop for ever till user types Q to shutdown.
 	   for(;;){
 		   
 	    for(;;){ // inner loop for inputs.
-		   System.out.println("Client: Enter the type of request (R/W) [type Q to shutdown]: ");
+		   System.out.println("Enter the type of request (R/W) [type Q to shutdown]: ");
 			   requestType = input.next();
 			   System.out.println("You entered:" + requestType + ".");
 		   // checks if the user wants to shutdown.
@@ -752,20 +775,7 @@ public class Client {
 		   }
 	    }// inner loop for type inputs.
 	    
-	    
-	    /*
-		if (new File(path + "\\" + receivedFileName).exists()) {
-			System.out.println("File Already Exists");
-			try {
-				error((byte) 6, address, port , new DatagramSocket());
-			} catch (SocketException e) {
-				e.printStackTrace();
-			}
-			return;
-		}
-		*/
 
-	    
 		   System.out.println("Client: Enter the file name (with extension) [type Q to shutdown]: ");
 		   filename = input.next();
 		   System.out.println("You entered:" + filename + ".");
@@ -788,7 +798,7 @@ public class Client {
 		    	break;
 		   	}
 		   }
-		   /*
+		   
 		   for(;;){
 			   	System.out.println("Client: Do you want verbose mode (y/n):");
 			   	String md = input.next();
@@ -800,7 +810,7 @@ public class Client {
 			    	break;
 			   	}
 			}
-		   */
+		   
 			System.out.println("Client: Processing your request...");
 		    Client c = new Client();
 		    boolean check = false;
