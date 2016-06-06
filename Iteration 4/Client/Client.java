@@ -22,6 +22,8 @@ public class Client {
    private static String path;
    private boolean terminate = false;
    private static InetAddress destAdd;
+   private InetAddress expAdd;
+   private int expPort;
    // we can run in normal (send directly to server) or test
    // (send to simulator) mode
    public static enum Mode { NORMAL, TEST};
@@ -194,7 +196,11 @@ public class Client {
 	   if(writeFile.canWrite()){
 	   try {
 		   out.write(p.getData(), 4, p.getLength()-4);
-		} catch (IOException e) {
+		}catch(FileNotFoundException t){
+			// if the file we are writing to disappeared.
+			
+			
+	    }catch (IOException e) {
 			//It's possible this may be able to catch multiple IO errors along with error 3, in
 			//which case we might be able to just add a switch that identifies which error occurred
 			System.out.println("IOException: " + e.getMessage());
@@ -383,7 +389,8 @@ public class Client {
 							return false; // terminates the connection.
 						}
 					}else if(verify(receivePacket, expData)){
-						
+						expAdd = receivePacket.getAddress();
+						expPort = receivePacket.getPort();
 						lastPacket = receivePacket;
 						receivedIt = true;
 						System.arraycopy(receivePacket.getData(), 0, expData, 0, expData.length); // saving the data block number received.
@@ -411,15 +418,14 @@ public class Client {
 			}
 			firstTime = false;
 
-			   try {
-					if(!CreateOutStream(receivePacket)){
-						return false;
-					}
-				} catch (FileNotFoundException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
+			try{
+				if(!CreateOutStream(receivePacket)){
+					return false;
 				}
+			}catch(IOException e){
+				// Something happened during creating the file. (maybe access denied).
+			}
+
 			// we write the data received
 			if(verbose){
 				analyzePacket(receivePacket);
@@ -429,6 +435,7 @@ public class Client {
 			
 			
 			writeData(receivePacket);
+			
 			if(terminate){
 				terminate = false;
 				out.close();
@@ -464,7 +471,7 @@ public class Client {
 								out.close();
 								return false; // terminates the connection.
 							}
-						 }else if(verify(receivePacket, expData) && checkAddPort(receivePacket, lastPacket.getAddress(), lastPacket.getPort())){
+						 }else if(verify(receivePacket, expData) && checkAddPort(receivePacket, expAdd, expPort)){
 							System.arraycopy(receivePacket.getData(), 0, expData, 0, expData.length); // saving the data block number received.
 							lastPacket = receivePacket;
 							updateBlockNum(expData);
@@ -565,6 +572,8 @@ public class Client {
 						return false;
 					}
 				}else if(verify(receivePacket, expACK)){
+					expAdd = receivePacket.getAddress();
+					expPort = receivePacket.getPort();
 					lastPacket = receivePacket;
 					receivedIt = true;
 					updateBlockNum(expACK);
@@ -658,7 +667,7 @@ public class Client {
 								in.close();
 								return false;
 							}
-						}else if(verify(receivePacket, expACK) && checkAddPort(receivePacket, lastPacket.getAddress(), lastPacket.getPort())){
+						}else if(verify(receivePacket, expACK) && checkAddPort(receivePacket, expAdd, expPort)){
 							receivedIt = true;
 							// we need to update the data block # corresponding to the ACK block #;
 							updateBlockNum(expACK);
