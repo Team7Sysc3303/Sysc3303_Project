@@ -45,6 +45,9 @@ public class Server {
 
 	private boolean terminate = false;
 	private boolean verbose = true;
+	
+	private InetAddress expAdd;
+	private int expPort;
 
 	public Server() {
 		try {
@@ -103,9 +106,9 @@ public class Server {
 		   case (byte) 5:
 			   if(verbose){
 			    System.out.println("Server: ERROR packet received (Code 5: Unknown Transfer ID)");
-		   		System.out.println("Server: Terminating the connection.");
+		   		System.out.println("Server: Ignoring packet received.");
 			   }
-		   		return true;
+		   		return false;
 			   
 		   }
 		   if(verbose){
@@ -225,7 +228,7 @@ public class Server {
 		   		}catch(Exception e){
 		   			e.printStackTrace();
 		   		}
-		   		terminate = true;
+		   		terminate = false;
 		   		return false;
 		   	}
 	   }
@@ -396,9 +399,10 @@ public class Server {
 		DatagramSocket transfer= null;
 		BufferedInputStream input = null;
 		DatagramPacket lastPacket = new DatagramPacket(receivedPacket, receivedPacket.length, address, port);
+		expAdd = address; expPort = port;
 		DatagramPacket receivedACK = new DatagramPacket(ack, ack.length);
 		boolean receivedIt;
-		
+		boolean firstTime = true;
 		int n;
 		try {
 			transfer = new DatagramSocket();
@@ -441,7 +445,7 @@ public class Server {
 								fileSet.remove(f);
 								return false; // terminates the connection.
 							}
-						}else if(verify(receivedACK, expACK, transfer) && checkAddPort(receivedACK, lastPacket.getAddress(), lastPacket.getPort(), transfer)){
+						}else if(verify(receivedACK, expACK, transfer) && checkAddPort(receivedACK, expAdd, expPort, transfer)){
 							lastPacket = receivedACK;
 							updateBlockNum(expACK);
 							updateBlockNum(data);
