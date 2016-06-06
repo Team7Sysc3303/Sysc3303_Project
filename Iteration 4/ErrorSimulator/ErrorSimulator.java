@@ -13,7 +13,7 @@ public class ErrorSimulator extends Thread{
 	// Mode of operation entered by the user. 0 for Normal mode, 1 for lost mode, 2 for delayed mode, 3 for duplicate mode, 4 to shutdown the error simulator
 	private int Selection;
 	private int serverPort = 69; // the server port will be initiated to 69 and will change according to the thread needed 
-	private DatagramSocket serverSocket, clientSocket, error5ServerSocket, error5ClientSocket; // socket deceleration for all three required sockets 
+	private DatagramSocket serverSocket, clientSocket, error5Socket; // socket deceleration for all three required sockets 
 	private DatagramPacket sendClientPacket, receiveClientPacket, sendServerPacket , receiveServerPacket; // packet deceleration for all packets being sent and received for both client and server
 	private byte clientData[]; // Stores the data received from the client
 	private int clientPort; //Stores the port number used to receive the client's request
@@ -33,8 +33,12 @@ public class ErrorSimulator extends Thread{
 	byte serverReply[] = new byte[DATA_SIZE]; // // Store the server's reply
 	byte serverData[] = new byte[DATA_SIZE]; // Stores the data received from the server
 	byte trueLastPacket[] = new byte[2]; // Stores the correct last block number of a data transfer to make sure that the file transfer process has been fully successful
+	InetAddress clientAddress;
+	SocketAddress errorAddress;
+	int errorPort = 55;
+	private InetAddress serverAddress;
 	
-	public ErrorSimulator(boolean verbose, int Selection, int delay, int packetType, int packetNumber, byte[] clientData, int clientPort, int clientLength, boolean Read, boolean Write, boolean errorReceived) {
+	public ErrorSimulator(boolean verbose, int Selection, int delay, int packetType, int packetNumber, byte[] clientData, int clientPort, int clientLength, boolean Read, boolean Write, boolean errorReceived, InetAddress serverAddress) {
 		this.verbose = verbose;
 		this.clientData = clientData;
 		this.clientPort = clientPort;
@@ -46,6 +50,7 @@ public class ErrorSimulator extends Thread{
 		this.packetNumber = packetNumber;
 		this.Read = Read;
 		this.Write = Write;
+		this.serverAddress= serverAddress;
 		this.errorReceived = errorReceived;
 		try {
 			serverSocket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
@@ -899,6 +904,7 @@ public class ErrorSimulator extends Thread{
 	}
 	
 	private boolean simulateError5() {
+		DatagramPacket errorPacket;
 		System.out.println("------------------------------------------------");
 		System.out.println("Invalid TFTP Operation Simulation (Error Code 5)");
 		/*if (packetType == 1 || packetType == 2) { // If we are sending an RRQ or WRQ that is not properly formed
@@ -917,14 +923,14 @@ public class ErrorSimulator extends Thread{
 			}
 			if (packetType == 3) { // DATA packet being duplicated from the server 
 
-				if (!firstPacket){ // Recieve request packet from client
+				if (!firstPacket){ // Receive request packet from client
 					clientReceive();
 				}
 				firstPacket = false;
 				serverSend(); // Send request to the server
 				doneTransfer();
 				if (done) return true;
-				serverReceive(); // Recieve desired packet from the server 
+				serverReceive(); // Receive desired packet from the server 
 
 				// Verify that this is the right data packet to be duplicated
 				if (foundPacket(receiveServerPacket)) {
@@ -932,15 +938,31 @@ public class ErrorSimulator extends Thread{
 					System.out.println("Error simulator recieved the data to be manipulated for Error 5...");
 					}
 					try {
-						error5ClientSocket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
+						error5Socket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
+						errorPacket = new DatagramPacket(serverData, serverLength, clientAddress, clientPort);
+						if (verbose){
+							System.out.println("Sending to client using new Socket");
+							printInformation(errorPacket);
+						}
+						error5Socket.send(errorPacket);
+						byte[] b = new byte[516];
+						DatagramPacket receive = new DatagramPacket(b, 516);
+						error5Socket.receive(receive);
+						printInformation(receive);
+						receive.setPort(serverPort);
+						receive.setAddress(serverAddress);
+						System.out.println("Sending Error Packet to server");
+						serverSocket.send(receive);
+						
+						/*b = new byte[516];
+						receive = new DatagramPacket(b, 516);
+						error5Socket.receive(receive);*/
+						error5Socket.close();
 					} // end try 
-					catch (SocketException se) {
-						System.err.println("SocketException: " + se.getMessage());
+					catch (Exception e) {
+						System.err.println("SocketException: " + e.getMessage());
 					} // end catch
-					error5ClientSend();
-					clientReceive();
-					serverSend();
-					return true;
+					return false;
 				}
 				clientSend();
 				verifyPacketSize();
@@ -953,20 +975,42 @@ public class ErrorSimulator extends Thread{
 				if (!firstPacket) {
 					clientReceive();
 				}
+				firstPacket = false;
 				// Verify that this is the right ACK packet to be duplicated
 				if (foundPacket(receiveClientPacket)) {
 					if(verbose){
 					System.out.println("Error simulator recieved the data to be manipulated for Error 4...");
 					}
 					try {
-						error5ServerSocket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
+						error5Socket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
+						errorPacket = new DatagramPacket(clientData, clientLength, serverAddress, serverPort);
+						if (verbose){
+							System.out.println("Sending to server using new Socket");
+							printInformation(errorPacket);
+						}
+						error5Socket.send(errorPacket);
+						
+						byte[] b = new byte[516];
+						DatagramPacket receive = new DatagramPacket(b, 516);
+						System.out.println("waiting to receive from server 1");
+						error5Socket.receive(receive);
+						
+						System.out.println("Received 1");
+						receive.setPort(clientPort);
+						receive.setAddress(clientAddress);
+						System.out.println("Sending Error Packet to client");
+						clientSocket.send(receive);
+						
+						/*b = new byte[516];
+						receive = new DatagramPacket(b, 516);
+						System.out.println("waiting to receive from server");
+						serverSocket.receive(receive);
+						System.out.println("Received");*/
+						error5Socket.close();
 					} // end try 
-					catch (SocketException se) {
-						System.err.println("SocketException: " + se.getMessage());
+					catch (Exception e) {
+						System.err.println("SocketException: " + e.getMessage());
 					} // end catch
-					error5ServerSend();
-					serverReceive();
-					clientSend();
 					return true;
 				}
 				serverSend();
@@ -999,14 +1043,14 @@ public class ErrorSimulator extends Thread{
 					System.out.println("Error simulator recieved the data to be manipulated for Error 4...");
 					}
 					try {
-						error5ServerSocket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
+						error5Socket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
 					} // end try 
 					catch (SocketException se) {
 						System.err.println("SocketException: " + se.getMessage());
 					} // end catch
-					error5ServerSend();
+					/*error5ServerSend();
 					serverReceive();
-					clientSend();
+					clientSend();*/
 					return true;
 				}
 				serverSend(); // If the duplicate was found, send the duplicate data to the server. Otherwise, this still sends the data it receives to the server, without duplicating it.
@@ -1038,14 +1082,14 @@ public class ErrorSimulator extends Thread{
 					System.out.println("Error simulator recieved the data to be manipulated for Error 4...");
 					}
 					try {
-						error5ClientSocket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
+						error5Socket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
 					} // end try 
 					catch (SocketException se) {
 						System.err.println("SocketException: " + se.getMessage());
 					} // end catch
-					error5ClientSend();
+					/*error5ClientSend();
 					clientReceive();
-					serverSend();
+					serverSend();*/
 					return true;
 				}
 				clientSend();
@@ -1084,7 +1128,34 @@ public class ErrorSimulator extends Thread{
 		// updating the data and length in the packet being sent to the server
 		clientData = receiveClientPacket.getData();
 		clientLength = receiveClientPacket.getLength();
+		clientAddress = receiveClientPacket.getAddress();
+		System.out.println("" + clientAddress);
 	}
+	
+	/*private void error5ClientReceive() {
+		if(verbose){
+		System.out.println("Waiting to receive packet from client");
+		}
+
+		receiveClientPacket = new DatagramPacket(clientReply, clientReply.length);
+		try { // wait to receive client packet
+			error5ClientSocket.receive(receiveClientPacket);
+		}//end try 
+		catch (IOException ie) {
+			System.err.println("IOException error: " + ie.getMessage());
+		}//end catch
+		if (receiveClientPacket.getData()[1] == (byte)5){
+			errorReceived = true;
+		}
+		if(verbose){
+		System.out.println("ConnectionManagerESim: Received packet from client");
+		printInformation(receiveClientPacket);
+		}
+		// updating the data and length in the packet being sent to the server
+		clientData = receiveClientPacket.getData();
+		clientLength = receiveClientPacket.getLength();
+		clientAddress = receiveClientPacket.getAddress();
+	}*/
 
 	private void clientSend(){
 		if(verbose){
@@ -1117,7 +1188,7 @@ public class ErrorSimulator extends Thread{
 		}
 	}
 	
-	private void error5ClientSend(){
+	/*private void error5ClientSend(){
 		if(verbose){
 		System.out.println("Sending packet to the Client");
 		}
@@ -1146,7 +1217,7 @@ public class ErrorSimulator extends Thread{
 		// print out information about the packet being sent to the client
 		printInformation(sendClientPacket);
 		}
-	}
+	}*/
 
 	private void serverReceive(){
 		if(verbose){
@@ -1186,10 +1257,10 @@ public class ErrorSimulator extends Thread{
 		}
 		// prepare the new send packet to the server
 		try {
-			sendServerPacket = new DatagramPacket(clientData, clientLength, InetAddress.getLocalHost(), serverPort);
+			sendServerPacket = new DatagramPacket(clientData, clientLength, serverAddress, serverPort);
 		} // end try 
-		catch (UnknownHostException uhe) {
-			System.err.println("Unknown host exception error: " + uhe.getMessage());
+		catch (Exception e) {
+			System.err.println("exception error: " + e.getMessage());
 		} // end catch
 
 		// send the packet to the server via the send/receive socket to server port
@@ -1206,7 +1277,7 @@ public class ErrorSimulator extends Thread{
 		}
 	}
 	
-	private void error5ServerSend() {
+	/*private void error5ServerSend() {
 		if(verbose){
 		System.out.println("Sending Packet to the Server");
 		System.out.print(" " + clientData);
@@ -1231,7 +1302,7 @@ public class ErrorSimulator extends Thread{
 		System.out.println("Packet sent to server");
 		printInformation(sendServerPacket);
 		}
-	}
+	}*/
 
 	private boolean foundPacket(DatagramPacket p) {
 		int type;
