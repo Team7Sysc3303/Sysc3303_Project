@@ -23,6 +23,7 @@ public class ErrorSimListener{
 	private boolean errorReceived = false;
 	private int packetType = 0; // Stores the type of packet to be lost, duplicated or delayed, as specified by the user
 	private int packetNumber = 0; // Stores the packet number to be lost, duplicated or delayed, as specified by the user
+	private static InetAddress serverAddress;
 
 public ErrorSimListener(boolean verbose) {
     this.verbose = verbose;
@@ -162,7 +163,7 @@ public void receiveClientRequest(){
 		verifyTransferType(receiveClientPacket); // verify whether the request is a read or write or an error packet
 		clientPort = receiveClientPacket.getPort(); // store the port number used by the client to send the request
 		clientLength = receiveClientPacket.getLength(); // store the length of the packet received from the client
-        Thread connectionmanager = new ErrorSimulator(verbose, Selection, delay, packetType, packetNumber, clientData, clientPort, clientLength, Read, Write, errorReceived);
+        Thread connectionmanager = new ErrorSimulator(verbose, Selection, delay, packetType, packetNumber, clientData, clientPort, clientLength, Read, Write, errorReceived, serverAddress);
 		connectionmanager.start();
 
 		while (connectionmanager.getState() != Thread.State.TERMINATED) {
@@ -229,6 +230,13 @@ private void printInformation(DatagramPacket p) {
 						validEntry = false;
 					}
 				} // end while
+				System.out.println("Enter your destination Address: ");
+		   		try {
+					serverAddress = InetAddress.getByName(in.next());
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
                 if (Selection == 9){
                     shutdown = true; // if user input is 4, Shutdown the Error simulator 
                 }
