@@ -945,23 +945,38 @@ public class ErrorSimulator extends Thread{
 							printInformation(errorPacket);
 						}
 						error5Socket.send(errorPacket);
+						if (verbose){
+							System.out.println("I have sent the packet to the client");
+						}
 						byte[] b = new byte[516];
 						DatagramPacket receive = new DatagramPacket(b, 516);
+						if (verbose){
+							System.out.println("I am trying to receive a response packet from the client");
+						}
 						error5Socket.receive(receive);
-						printInformation(receive);
+						if (verbose){
+							System.out.println("Response packet received from the client");
+							printInformation(receive);
+						}
 						receive.setPort(serverPort);
 						receive.setAddress(serverAddress);
-						System.out.println("Sending Error Packet to server");
+						if (verbose){
+							System.out.println("Sending Error Packet to server");
+						}
 						serverSocket.send(receive);
 						
 						/*b = new byte[516];
 						receive = new DatagramPacket(b, 516);
 						error5Socket.receive(receive);*/
+						if (verbose){
+							System.out.println("Closing error socket");
+						}
 						error5Socket.close();
 					} // end try 
 					catch (Exception e) {
 						System.err.println("SocketException: " + e.getMessage());
 					} // end catch
+					Selection = 0;
 					return false;
 				}
 				clientSend();
@@ -985,33 +1000,51 @@ public class ErrorSimulator extends Thread{
 						error5Socket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
 						errorPacket = new DatagramPacket(clientData, clientLength, serverAddress, serverPort);
 						if (verbose){
-							System.out.println("Sending to server using new Socket");
+							System.out.println("Sending to server using error Socket");
 							printInformation(errorPacket);
 						}
 						error5Socket.send(errorPacket);
+						if(verbose){
+							System.out.println("I have sent the packet to the server");
+						}
 						
 						byte[] b = new byte[516];
 						DatagramPacket receive = new DatagramPacket(b, 516);
-						System.out.println("waiting to receive from server 1");
+						if(verbose){
+							System.out.println("Attempting to receive from the server");
+						}
 						error5Socket.receive(receive);
 						
-						System.out.println("Received 1");
+						if (verbose){
+							System.out.println("Paket received from the server");
+							printInformation(receive);
+						}
 						receive.setPort(clientPort);
 						receive.setAddress(clientAddress);
+						if(verbose){
 						System.out.println("Sending Error Packet to client");
+						}
 						clientSocket.send(receive);
+						if (verbose){
+							System.out.println("Packet sent to the client");
+							printInformation(errorPacket);
+						}
 						
 						/*b = new byte[516];
 						receive = new DatagramPacket(b, 516);
 						System.out.println("waiting to receive from server");
 						serverSocket.receive(receive);
 						System.out.println("Received");*/
+						if(verbose){
+							System.out.println("I am closing the error socket I created");
+						}
 						error5Socket.close();
 					} // end try 
 					catch (Exception e) {
 						System.err.println("SocketException: " + e.getMessage());
 					} // end catch
-					return true;
+					Selection = 0;
+					return false;
 				}
 				serverSend();
 				// Check if the last acknowledge was just sent to the server
@@ -1033,25 +1066,64 @@ public class ErrorSimulator extends Thread{
 			System.out.println("Starting invalid packet send for write action...");
 			}
 			if (packetType == 3) { // Check if the user specified a data duplication mode
-				if (!firstPacket){
+				if (!firstPacket) {
 					clientReceive();
 				}
 				firstPacket = false;
-				// Verify that this is the right DATA packet to be duplicated
+				// Verify that this is the right ACK packet to be duplicated
 				if (foundPacket(receiveClientPacket)) {
 					if(verbose){
 					System.out.println("Error simulator recieved the data to be manipulated for Error 4...");
 					}
 					try {
 						error5Socket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
+						errorPacket = new DatagramPacket(clientData, clientLength, serverAddress, serverPort);
+						if (verbose){
+							System.out.println("Sending to server using error Socket");
+							printInformation(errorPacket);
+						}
+						error5Socket.send(errorPacket);
+						if(verbose){
+							System.out.println("I have sent the packet to the server");
+						}
+						
+						byte[] b = new byte[516];
+						DatagramPacket receive = new DatagramPacket(b, 516);
+						if(verbose){
+							System.out.println("Attempting to receive from the server");
+						}
+						error5Socket.receive(receive);
+						
+						if (verbose){
+							System.out.println("Paket received from the server");
+							printInformation(receive);
+						}
+						receive.setPort(clientPort);
+						receive.setAddress(clientAddress);
+						if(verbose){
+						System.out.println("Sending Error Packet to client");
+						}
+						clientSocket.send(receive);
+						if (verbose){
+							System.out.println("Packet sent to the client");
+							printInformation(errorPacket);
+						}
+						
+						/*b = new byte[516];
+						receive = new DatagramPacket(b, 516);
+						System.out.println("waiting to receive from server");
+						serverSocket.receive(receive);
+						System.out.println("Received");*/
+						if(verbose){
+							System.out.println("I am closing the error socket I created");
+						}
+						error5Socket.close();
 					} // end try 
-					catch (SocketException se) {
-						System.err.println("SocketException: " + se.getMessage());
+					catch (Exception e) {
+						System.err.println("SocketException: " + e.getMessage());
 					} // end catch
-					/*error5ServerSend();
-					serverReceive();
-					clientSend();*/
-					return true;
+					Selection = 0;
+					return false;
 				}
 				serverSend(); // If the duplicate was found, send the duplicate data to the server. Otherwise, this still sends the data it receives to the server, without duplicating it.
 				verifyPacketSize(); // Check if the sent data was the last data to be transfered.
@@ -1069,40 +1141,73 @@ public class ErrorSimulator extends Thread{
 
 			else if (packetType == 4) { // Check if the user specified a data duplication mode
 
-				if (!firstPacket) { // if this is not the first packet to be sent, recieve next data or ACK from the client. If this is the first data transfer, skip this loop and sent request to the server.
+				if (!firstPacket){ // Receive request packet from client
 					clientReceive();
-				} // end if
+				}
+				firstPacket = false;
+				serverSend(); // Send request to the server
+				doneTransfer();
+				if (done) return true;
+				serverReceive(); // Receive desired packet from the server 
 
-				serverSend(); // Send the client's packet to the server
-				verifyPacketSize(); // Check if we have sent the last packet to the client, if this is not the first data transfer stage
-				serverReceive(); // Retrieve an ACK from the server
-				// Verify that this is the right ACK packet to be duplicated
+				// Verify that this is the right data packet to be duplicated
 				if (foundPacket(receiveServerPacket)) {
 					if(verbose){
-					System.out.println("Error simulator recieved the data to be manipulated for Error 4...");
+					System.out.println("Error simulator recieved the data to be manipulated for Error 5...");
 					}
 					try {
 						error5Socket = new DatagramSocket(); // Create a new Datagram socket for receiving data from the server.
+						errorPacket = new DatagramPacket(serverData, serverLength, clientAddress, clientPort);
+						if (verbose){
+							System.out.println("Sending to client using new Socket");
+							printInformation(errorPacket);
+						}
+						error5Socket.send(errorPacket);
+						if (verbose){
+							System.out.println("I have sent the packet to the client");
+						}
+						byte[] b = new byte[516];
+						DatagramPacket receive = new DatagramPacket(b, 516);
+						if (verbose){
+							System.out.println("I am trying to receive a response packet from the client");
+						}
+						error5Socket.receive(receive);
+						if (verbose){
+							System.out.println("Response packet received from the client");
+							printInformation(receive);
+						}
+						receive.setPort(serverPort);
+						receive.setAddress(serverAddress);
+						if (verbose){
+							System.out.println("Sending Error Packet to server");
+						}
+						serverSocket.send(receive);
+						
+						/*b = new byte[516];
+						receive = new DatagramPacket(b, 516);
+						error5Socket.receive(receive);*/
+						if (verbose){
+							System.out.println("Closing error socket");
+						}
+						error5Socket.close();
 					} // end try 
-					catch (SocketException se) {
-						System.err.println("SocketException: " + se.getMessage());
+					catch (Exception e) {
+						System.err.println("SocketException: " + e.getMessage());
 					} // end catch
-					/*error5ClientSend();
-					clientReceive();
-					serverSend();*/
-					return true;
-				}
-				clientSend();
-				doneTransfer();
-				if (done){
-					return true;
-				}
-				else{
-					firstPacket = false;
-					return false;
-				}
-			}// end else if
-		}// End write ACK duplication mode
+					Selection = 0;
+					
+					clientSend();
+					doneTransfer();
+					if (done){
+						return true;
+					}
+					else{
+						firstPacket = false;
+						return false;
+					}
+				}// end if
+			}// End write ACK error 5 mode
+		}
 		return true;
 	}
 
