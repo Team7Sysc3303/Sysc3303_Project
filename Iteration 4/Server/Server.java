@@ -508,9 +508,25 @@ public class Server {
 					input.close();
 					return true;
 				}
-
+			}catch(FileNotFoundException t){
+				System.out.println("During transfer error code 1 [FileNotFound]");
+				error((byte)1,receivedACK.getAddress(), receivedACK.getPort(), transfer);
+				try {
+					input.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					System.out.println("File cannot be closed" );
+					System.out.println("IO error: " + e.getMessage());
+					fileSet.remove(f);
+					return false;
+				}
+				fileSet.remove(f);
+				return false;
 			}catch(IOException e){
 				//
+				System.out.println("Error occured during transfer.");
+				System.out.println("IO error: " + e.getMessage());
+				return false;
 			}
 			
 		}
