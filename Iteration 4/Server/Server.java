@@ -1,4 +1,5 @@
-package Server;
+package iteration4;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -178,11 +179,11 @@ public class Server {
 			   data[3] = (byte) newSecond;
 			   
 			   
-		   }else if(Byte.toUnsignedInt(new Byte(data[2])) == 0 && Byte.toUnsignedInt(new Byte(data[3])) == 255){
+		   }else if(Byte.toUnsignedInt(new Byte(data[2])) !=255 && Byte.toUnsignedInt(new Byte(data[3])) == 255){
 			   int newFirst = Byte.toUnsignedInt(new Byte(data[2])) + 1;
 			   data[2] = (byte) newFirst ; data[3] = 0;
 		   }else{
-			   data[3] = 1; data[2] = 0;
+			   data[3] = 0; data[2] = 0;
 		   }
 
 	   }
