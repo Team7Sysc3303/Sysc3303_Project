@@ -1,4 +1,4 @@
-package Client;
+package iteration4;
 // TFTPClient.java
 // This class is the client side for a very simple assignment based on TFTP on
 // UDP/IP. The client uses one port and sends a read or write request and gets 
@@ -123,11 +123,11 @@ public class Client {
 		   data[3] = (byte) newSecond;
 
 		   
-	   }else if(Byte.toUnsignedInt(new Byte(data[2])) == 0 && Byte.toUnsignedInt(new Byte(data[3])) == 255){
+	   }else if(Byte.toUnsignedInt(new Byte(data[2])) !=255 && Byte.toUnsignedInt(new Byte(data[3])) == 255){
 		   int newFirst = Byte.toUnsignedInt(new Byte(data[2])) + 1;
 		   data[2] = (byte) newFirst ; data[3] = 0;
 	   }else{
-		   data[2] = 0; data[3] = 1;
+		   data[2] = 0; data[3] = 0;
 	   }
 
    }
@@ -319,9 +319,9 @@ public class Client {
 	   if(Byte.toUnsignedInt(new Byte(second)) != 255){
 		   int newSecond = Byte.toUnsignedInt(new Byte(second)) + 1;
 		   data[3] = (byte) newSecond;
-		   data[2] = 0;
+		   //data[2] = 0;
 		   
-	   }else if(Byte.toUnsignedInt(new Byte(first)) == 0 && Byte.toUnsignedInt(new Byte(second)) == 255){
+	   }else if(Byte.toUnsignedInt(new Byte(first)) !=255 && Byte.toUnsignedInt(new Byte(second)) == 255){
 		   int newFirst = Byte.toUnsignedInt(new Byte(first)) + 1;
 		   data[2] = (byte) newFirst ; data[3] = 0;
 	   }else{
