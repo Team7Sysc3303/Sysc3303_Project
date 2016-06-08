@@ -728,12 +728,20 @@ public class Client {
 				finished = true;
 				return true; // we finished our WRQ transfer.
 			}
+		}catch(FileNotFoundException t){
+			System.out.println("During transfer error code 1 [File not found!");
+			error((byte)1, receivePacket.getAddress(), receivePacket.getPort());
+			in.close();
+			return false;
 			
 		}catch(Exception e){
 			// other exceptions. during transfer.
 			//------------------------------------------------------------------------
 			//------------------------------------------------------------------------
-			
+			System.out.println("IOException: " + e.getMessage());
+			error((byte)3, receivePacket.getAddress(), receivePacket.getPort());
+			in.close();
+			return false;
 			
 		}
 	    }// end while
