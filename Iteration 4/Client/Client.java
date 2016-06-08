@@ -198,7 +198,15 @@ public class Client {
 		   out.write(p.getData(), 4, p.getLength()-4);
 		}catch(FileNotFoundException t){
 			// if the file we are writing to disappeared.
-			
+			System.out.println("Client: Sending ERROR packet (code 1)[FileNotFound]");
+			error((byte)1, p.getAddress(), p.getPort());
+			terminate = true;
+			return;
+		}catch(AccessControlException y){
+			System.out.println("Client: Sending ERROR packet (code 2)[Cannot Access File].");
+			error((byte)2, p.getAddress(), p.getPort());
+			terminate = true;
+			return;
 			
 	    }catch (IOException e) {
 			//It's possible this may be able to catch multiple IO errors along with error 3, in
@@ -208,21 +216,33 @@ public class Client {
 			error((byte)3, p.getAddress(), p.getPort());
 			terminate = true;
 		}
-	   }else{
-		   
-			System.out.println("Client: Cannot write to file, file is ReadOnly.");
-			error((byte)2, p.getAddress(), p.getPort());
-			terminate = true;
-			//System.exit(1);
 	   }
    }
    
    
    public boolean checkTypeError(DatagramPacket p){
 	   switch(p.getData()[3]){
-	   case (byte) 1: case (byte) 2: case (byte) 3: case (byte) 6:
+	   case (byte) 1: 
 		   if(verbose){
-		    System.out.println("Client: ERROR packet received (IO error)");
+			    System.out.println("Client: ERROR packet received (Code 1)");
+		   		System.out.println("Client: Terminating the connection.");
+			   }
+		   		return true;
+	   case (byte) 2: 
+		   if(verbose){
+			    System.out.println("Client: ERROR packet received (Code 2)");
+		   		System.out.println("Client: Terminating the connection.");
+			   }
+		   		return true;
+	   case (byte) 3: 
+		   if(verbose){
+			    System.out.println("Client: ERROR packet received (Code 3)");
+		   		System.out.println("Client: Terminating the connection.");
+			   }
+		   		return true;
+	   case (byte) 6:
+		   if(verbose){
+		    System.out.println("Client: ERROR packet received (Code 6)");
 	   		System.out.println("Client: Terminating the connection.");
 		   }
 	   		return true;
@@ -544,6 +564,7 @@ public class Client {
 	   data[0] = 0; data[1] = 3;
 	   data[2] = 0; data[3] = 1;
 	   byte[] expACK = {0,4,0,0};
+	   int oldData=0;
 	   boolean receivedIt = false;
 	   DatagramPacket lastPacket = null;
 
@@ -635,9 +656,10 @@ public class Client {
 			// condition to check if we aren't done yet from reading.
 			// read() returns -1 if we have no more data to be read from the file.
 		try{
-			if((n=in.read(read)) != -1 ){
+			if((n=in.read(read)) != -1 || oldData == 512){
 				// now read has the data, data has the first 4 bytes ready. therefore;
 				System.arraycopy(read, 0, data, 4, read.length);
+				oldData =n;
 				// data is read to be sent.
 				System.out.println("----------- N = " + n);
 				// sending the data packet block#n//
@@ -699,22 +721,13 @@ public class Client {
 					}
 				}
 				updateACK(receivePacket.getData()[2], receivePacket.getData()[3], data);
-				
+
 			}else{ 
 				
 				in.close();
 				finished = true;
+				return true; // we finished our WRQ transfer.
 			}
-			return true; // we finished our WRQ transfer.
-		}catch(FileNotFoundException e){
-			// something happened during the transfer led to filenot found
-			//------------------------------------------------------------------------
-			//------------------------------------------------------------------------
-		}catch(IOException e){
-			// IO exceptions during the transfer.
-			// -----------------------------------------------------------------------
-			//------------------------------------------------------------------------
-			
 			
 		}catch(Exception e){
 			// other exceptions. during transfer.
@@ -748,6 +761,11 @@ public class Client {
    	path = input.next();
    	if(path.equalsIgnoreCase("Q")){
    		System.out.println("Client: Shutting Down..");
+		if(verbose){
+			   System.out.println("Client: Closing the socket..");
+		 }
+           // We're finished, so close the socket.
+        sendReceiveSocket.close();
    		System.exit(1);
    	}
    	
@@ -768,6 +786,11 @@ public class Client {
 		   // checks if the user wants to shutdown.
 		   if(requestType.equalsIgnoreCase("Q")){
 			   System.out.println("Client: Shutting Down..");
+			   if(verbose){
+				   System.out.println("Client: Closing the socket..");
+			   }
+	           // We're finished, so close the socket.
+	           sendReceiveSocket.close();
 		   		System.exit(1);
 	       }
 		   
@@ -791,11 +814,16 @@ public class Client {
 		   // checks if the user wants to shutdown.
 		   if(filename.equalsIgnoreCase("Q")){
 			   System.out.println("Client: Shutting Down..");
+			   if(verbose){
+				   System.out.println("Client: Closing the socket..");
+			   }
+	           // We're finished, so close the socket.
+	           sendReceiveSocket.close();
 		   		System.exit(1);
 	       }
 		   
 		   for(;;){
-		   	System.out.println("Client: Do you want test mode (y/n):");
+		   	System.out.println("Client: Do you want test mode (y/n) [type Q to shutdown]:");
 		   	String md = input.next();
 		    if (md.equalsIgnoreCase("n")) {
 		    	System.out.println("Client: mode is Normal");
@@ -806,6 +834,18 @@ public class Client {
 		    	sendPort = 23;
 		    	break;
 		   	}
+		    if(md.equalsIgnoreCase("Q")){
+		    		System.out.println("Client: Shutting Down..");
+				   if(verbose){
+					   System.out.println("Client: Closing the socket..");
+				   }
+		           // We're finished, so close the socket.
+		           sendReceiveSocket.close();
+		           System.exit(1);
+		    }else{
+		    	System.out.println("Entered request type is invalid. try again. [type Q to shutdown]");
+		    }
+		    
 		   }
 		   
 		   for(;;){
@@ -818,6 +858,17 @@ public class Client {
 			    	verbose = false;
 			    	break;
 			   	}
+			    if(md.equalsIgnoreCase("Q")){
+		    		System.out.println("Client: Shutting Down..");
+				   if(verbose){
+					   System.out.println("Client: Closing the socket..");
+				   }
+		           // We're finished, so close the socket.
+		           sendReceiveSocket.close();
+		           System.exit(1);
+		    }else{
+		    	System.out.println("Entered request type is invalid. try again. [type Q to shutdown]");
+		    }			    
 			}
 		   
 			System.out.println("Client: Processing your request...");
@@ -833,12 +884,6 @@ public class Client {
 		    	System.out.println("File Write complete.");
 		    }
 
-		   if(verbose){
-			   System.out.println("Client: Closing the socket..");
-		   }
-           // We're finished, so close the socket.
-           sendReceiveSocket.close();
- 
 	}
 	   
    }
