@@ -91,10 +91,28 @@ public class Server {
 	
 	   public boolean checkTypeError(DatagramPacket p){
 		   switch(p.getData()[3]){
-		   case (byte) 1: case (byte) 2: case (byte) 3: case (byte) 6:
+		   case (byte) 1: 
 			   if(verbose){
-			    System.out.println("Server: ERROR packet received (IO error)");
-		   		System.out.println("Server: Terminating the connection.");
+				    System.out.println("Client: ERROR packet received (Code 1)");
+			   		System.out.println("Client: Terminating the connection.");
+				   }
+			   		return true;
+		   case (byte) 2: 
+			   if(verbose){
+				    System.out.println("Client: ERROR packet received (Code 2)");
+			   		System.out.println("Client: Terminating the connection.");
+				   }
+			   		return true;
+		   case (byte) 3: 
+			   if(verbose){
+				    System.out.println("Client: ERROR packet received (Code 3)");
+			   		System.out.println("Client: Terminating the connection.");
+				   }
+			   		return true;
+		   case (byte) 6:
+			   if(verbose){
+			    System.out.println("Client: ERROR packet received (Code 6)");
+		   		System.out.println("Client: Terminating the connection.");
 			   }
 		   		return true;
 		   case (byte) 4:
@@ -173,6 +191,18 @@ public class Server {
 		   if(new File(path + "\\" + filename).canWrite()){
 		   try {
 			   out.write(p.getData(), 4, p.getLength()-4);
+			}catch(FileNotFoundException g){
+				// if the file we are writing to disappeared.
+				System.out.println("Client: Sending ERROR packet (code 1)[FileNotFound]");
+				error((byte)1, p.getAddress(), p.getPort(), t);
+				terminate = true;
+				return;
+			}catch(AccessControlException y){
+				System.out.println("Client: Sending ERROR packet (code 2)[Cannot Access File].");
+				error((byte)2, p.getAddress(), p.getPort(), t);
+				terminate = true;
+				return;
+				
 			} catch (IOException e) {
 				//It's possible this may be able to catch multiple IO errors along with error 3, in
 				//which case we might be able to just add a switch that identifies which error occurred
@@ -181,12 +211,6 @@ public class Server {
 				error((byte)3, p.getAddress(), p.getPort(), t);
 				terminate = true;
 			}
-		   }else{
-			   
-				System.out.println("Client: Cannot write to file, file is ReadOnly.");
-				error((byte)2, p.getAddress(), p.getPort(), t);
-				terminate = true;
-				//System.exit(1);
 		   }
 	   }
 	
